@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aura & Weave | Premium T-Shirts & Jeans for Women</title>
+    <meta name="description"
+        content="Explore handcrafted premium women's collection of tees, denim, and hoodies. Premium materials, tailored fits, dynamic design.">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <!-- Page Preloader -->
+    <div class="page-loader" id="pageLoader">
+        <div class="loader-logo">Aura & <span>Weave</span></div>
+        <div class="loader-bar"></div>
+    </div>
+
+    <!-- Configuration Mode Banner -->
+    <div class="demo-banner" id="demoBanner" style="display: none;">
+        <span>✨ App running in offline local fallback mode.</span>
+        <a href="instructions.md" target="_blank">View Setup Guide to connect Google Sheets</a>
+    </div>
+
+    <!-- Header Navigation -->
+    <header>
+        <div class="nav-container">
+            <a href="#" class="logo" id="brandLogo">
+                Aura & <span>Weave</span>
+            </a>
+
+            <nav>
+                <ul>
+                    <li><a href="#hero" class="active" id="navHome">Home</a></li>
+                    <li><a href="#catalog" id="navTopSelling" data-category="top">Top Selling</a></li>
+                    <li><a href="#catalog" id="navShirts" data-category="shirts">Shirts</a></li>
+                    <li><a href="#catalog" id="navJeans" data-category="jeans">Jeans</a></li>
+                    <li><a href="#categories" id="navCategories">Categories</a></li>
+                </ul>
+            </nav>
+
+            <div class="nav-actions">
+                <a href="admin.html" class="admin-link">
+                    Admin Dashboard
+                </a>
+                <button class="cart-btn" id="openCartBtn" aria-label="Open Cart">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="lucide lucide-shopping-bag">
+                        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+                        <path d="M3 6h18" />
+                        <path d="M16 10a4 4 0 0 1-8 0" />
+                    </svg>
+                    <span class="cart-count" id="cartCountBubble">0</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Banner Section -->
+    <section class="hero" id="hero">
+        <div class="hero-banner">
+            <span class="hero-subtitle">New Women's Arrivals</span>
+            <h1 class="hero-title">Timeless Essentials. Tailored For You.</h1>
+            <p class="hero-desc">Discover our curated selection of premium organic cotton t-shirts, handcrafted designer
+                jeans, and cozy oversized hoodies.</p>
+            <button class="hero-btn"
+                onclick="document.getElementById('catalog').scrollIntoView({behavior: 'smooth'})">Shop
+                Collection</button>
+        </div>
+    </section>
+
+    <!-- Choose by Category Section -->
+    <section class="categories-section" id="categories">
+        <div class="section-head">
+            <span class="section-subtitle">Aesthetic Edits</span>
+            <h2 class="section-title">Choose By Category</h2>
+        </div>
+
+        <div class="category-grid">
+            <!-- Shirts category -->
+            <div class="category-card" data-cat="shirts">
+                <img src="https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=400&q=80"
+                    alt="Premium T-Shirts">
+                <div class="category-overlay">
+                    <h3 class="category-name">Classic Shirts & Tees</h3>
+                    <span class="category-link">Explore shirts
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14" />
+                            <path d="m12 5 7 7-7 7" />
+                        </svg>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Jeans category -->
+            <div class="category-card" data-cat="jeans">
+                <img src="https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&w=400&q=80"
+                    alt="Handfinished Denim">
+                <div class="category-overlay">
+                    <h3 class="category-name">Tailored Jeans</h3>
+                    <span class="category-link">Explore denim
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14" />
+                            <path d="m12 5 7 7-7 7" />
+                        </svg>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Hoodies category -->
+            <div class="category-card" data-cat="hoodies">
+                <img src="https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=400&q=80"
+                    alt="Soft Organic Hoodies">
+                <div class="category-overlay">
+                    <h3 class="category-name">Cozy Hoodies</h3>
+                    <span class="category-link">Explore hoodies
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14" />
+                            <path d="m12 5 7 7-7 7" />
+                        </svg>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Collection Catalog Section -->
+    <section class="shop-section" id="catalog">
+        <div class="section-head">
+            <span class="section-subtitle">Our Wardrobe</span>
+            <h2 class="section-title">The Collection</h2>
+        </div>
+
+        <!-- Filter selectors -->
+        <div class="filter-tabs">
+            <button class="filter-tab active" data-filter="all">All Items</button>
+            <button class="filter-tab" data-filter="top">Top Selling</button>
+            <button class="filter-tab" data-filter="shirts">Shirts & Tees</button>
+            <button class="filter-tab" data-filter="jeans">Jeans & Denim</button>
+            <button class="filter-tab" data-filter="hoodies">Hoodies</button>
+        </div>
+
+        <!-- Grid Layout -->
+        <div class="products-grid" id="productsGrid">
+            <!-- Loading skeleton / Empty catalog items will resolve here from script -->
+        </div>
+    </section>
+
+    <!-- Footer block -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-col">
+                <h4 style="font-family: var(--font-serif); font-size:1.4rem;">Aura & Weave</h4>
+                <p>A premium clothing experiences tailored for women. Quality fabrics, ethical manufacturing, and clean
+                    minimalist silhouettes.</p>
+            </div>
+            <div class="footer-col">
+                <h4>Collection</h4>
+                <ul class="footer-links">
+                    <li><a href="#catalog" onclick="filterCatalog('shirts')">Premium T-Shirts</a></li>
+                    <li><a href="#catalog" onclick="filterCatalog('jeans')">Classic Jeans</a></li>
+                    <li><a href="#catalog" onclick="filterCatalog('hoodies')">Cozy Hoodies</a></li>
+                    <li><a href="#catalog" onclick="filterCatalog('top')">Top Selling</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Support</h4>
+                <ul class="footer-links">
+                    <li><a href="#">Size Chart Guide</a></li>
+                    <li><a href="#">Shipping & Returns</a></li>
+                    <li><a href="#">Terms & Conditions</a></li>
+                    <li><a href="#">Privacy Policy</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Connect</h4>
+                <p>Subscribe to receive news, exclusive sales invitations, and style previews direct to your inbox.</p>
+                <p style="color: var(--accent); font-weight: 500;">support@auraweave.com</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Aura & Weave Boutique. All rights reserved.</p>
+            <p>Powered by HTML5, CSS & Google Sheets Database</p>
+        </div>
+    </footer>
+
+    <!-- Side Cart Drawer Backdrop -->
+    <div class="cart-overlay-bg" id="cartOverlayBg"></div>
+
+    <!-- Sliding Cart Drawer Panel -->
+    <div class="cart-drawer" id="cartDrawer">
+
+        <!-- Cart Index View -->
+        <div id="cartIndexView" style="display: flex; flex-direction: column; height: 100%;">
+            <div class="cart-header">
+                <h3>Shopping Bag</h3>
+                <button class="cart-close" id="closeCartBtn">&times;</button>
+            </div>
+
+            <div class="cart-body">
+                <div id="cartItemsContainer" class="cart-items-list">
+                    <!-- Filled by Javascript dynamic drawer render -->
+                </div>
+            </div>
+
+            <div class="cart-footer">
+                <div class="cart-subtotal-row">
+                    <span class="subtotal-label">Subtotal</span>
+                    <span class="subtotal-val" id="cartSubtotal">$0.00</span>
+                </div>
+                <button class="checkout-btn" id="toCheckoutBtn" disabled>Proceed to Checkout</button>
+            </div>
+        </div>
+
+        <!-- Shipping/Checkout Form View -->
+        <div id="cartCheckoutView" class="checkout-form-container"
+            style="flex-direction: column; height: 100%; padding: 24px; overflow-y: auto;">
+            <button class="checkout-back-btn" id="backToCartBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m12 19-7-7 7-7" />
+                    <path d="M19 12H5" />
+                </svg>
+                Back to Bag
+            </button>
+
+            <h3 class="checkout-header">Shipping Details</h3>
+
+            <form id="checkoutForm">
+                <div class="form-group">
+                    <label for="custName">Full Name</label>
+                    <input type="text" id="custName" placeholder="Alexandra Smith" required>
+                </div>
+                <div class="form-group">
+                    <label for="custPhone">Phone Number</label>
+                    <input type="text" id="custPhone" placeholder="+1 (415) 555-2671" required>
+                </div>
+                <div class="form-group">
+                    <label for="custAddress">Delivery Address</label>
+                    <textarea id="custAddress" placeholder="104 Elegant Av, Apt 4C, New York, NY" required></textarea>
+                </div>
+
+                <div style="border-top: 1px solid var(--border); padding-top: 16px; margin-top: 24px;">
+                    <div class="cart-subtotal-row" style="margin-bottom: 16px;">
+                        <span class="subtotal-label" style="font-size: 0.9rem;">Order Total</span>
+                        <span class="subtotal-val" id="checkoutSubtotal" style="font-size: 1.25rem;">$0.00</span>
+                    </div>
+                    <button type="submit" class="place-order-btn" id="submitOrderBtn">
+                        <span>Place Order</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Custom Alert/Confirmation Dialogue Modal -->
+    <div class="alert-modal-overlay" id="alertModalOverlay">
+        <div class="alert-modal">
+            <div class="alert-icon" id="alertModalIcon">
+                <!-- SVG will insert dynamically based on alert status -->
+            </div>
+            <h3 class="alert-title" id="alertModalTitle">Order Placed</h3>
+            <p class="alert-message" id="alertModalMsg">Thank you for your order. We have received it and will process
+                it shortly!</p>
+            <button class="alert-btn" id="alertModalCloseBtn">Got it</button>
+        </div>
+    </div>
+
+    <!-- Core Javascript modules -->
+    <script src="js/config.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
