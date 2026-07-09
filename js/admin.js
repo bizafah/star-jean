@@ -314,7 +314,7 @@ function renderOrdersTable() {
     sorted.forEach(ord => {
         let itemsHTML = '';
         if (Array.isArray(ord.items)) {
-            itemsHTML = ord.items.map(i => `<span class="order-item-tag" style="background:#F3F4F6; margin-right:4px; margin-bottom:4px; padding:2px 8px; border-radius:4px; font-size:0.75rem; display:inline-block; border: 1px solid var(--border-color);">${i.name} (${i.size}) x${i.quantity}</span>`).join('');
+            itemsHTML = ord.items.map(i => `<span class="order-item-tag" style="background:#F3F4F6; margin-right:4px; margin-bottom:4px; padding:2px 8px; border-radius:4px; font-size:0.75rem; display:inline-block; border: 1px solid var(--border-color);">${i.name} (${i.selected_size || i.size}) x${i.quantity}</span>`).join('');
         } else {
             itemsHTML = `<span class="order-item-tag" style="background:#F3F4F6; padding:2px 8px; border-radius:4px; font-size:0.75rem;">${ord.items}</span>`;
         }

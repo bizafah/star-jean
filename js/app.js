@@ -430,7 +430,17 @@ async function handleCheckout(e) {
             name: name,
             phone: phone,
             address: address,
-            items: state.cart.map(i => ({ id: i.id, name: i.name, size: i.size, quantity: i.quantity, price: i.price })),
+            items: state.cart.map(i => {
+                const baseSize = i.size.split(' ')[0];
+                return {
+                    id: i.id,
+                    name: i.name,
+                    size: baseSize,
+                    quantity: i.quantity,
+                    price: i.price,
+                    selected_size: i.size
+                };
+            }),
             total: subtotal,
             status: 'Pending'
         }
