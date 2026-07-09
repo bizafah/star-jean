@@ -1,10 +1,10 @@
-// Storefront Core Logic
+// Star-Jean Storefront Core Logic
 
 // App State
 const state = {
     products: [],
     cart: [],
-    selectedSizes: {}, // maps product.id -> selected size string ('S', 'M', or 'L')
+    selectedSizes: {},
     currentFilter: 'all'
 };
 
@@ -29,8 +29,6 @@ const elements = {
     backToCartBtn: document.getElementById('backToCartBtn'),
     checkoutForm: document.getElementById('checkoutForm'),
     submitOrderBtn: document.getElementById('submitOrderBtn'),
-
-    // Alert Modal
     alertOverlay: document.getElementById('alertModalOverlay'),
     alertIcon: document.getElementById('alertModalIcon'),
     alertTitle: document.getElementById('alertModalTitle'),
@@ -38,18 +36,17 @@ const elements = {
     alertCloseBtn: document.getElementById('alertModalCloseBtn')
 };
 
-// Initialize Application
+// Initialize
 document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     loadCartFromStorage();
     fetchProductsAndRender();
 
-    // Show demo notice banner if no Google Apps Script Web App URL is configured
     if (!CONFIG.API_URL) {
         elements.demoBanner.style.display = 'flex';
     }
 
-    // Start hero slideshow changing every 1 second
+    // Hero slideshow - changes every 1 second
     const slides = document.querySelectorAll('.hero-slide');
     if (slides.length > 0) {
         let currentSlide = 0;
@@ -57,18 +54,15 @@ document.addEventListener('DOMContentLoaded', () => {
             slides[currentSlide].classList.remove('active');
             currentSlide = (currentSlide + 1) % slides.length;
             slides[currentSlide].classList.add('active');
-        }, 1000); // 1 second
+        }, 1000);
     }
 });
 
-// Setup Events
 function setupEventListeners() {
-    // Drawer Toggles
     elements.openCartBtn.addEventListener('click', openCart);
     elements.closeCartBtn.addEventListener('click', closeCart);
     elements.cartOverlayBg.addEventListener('click', closeCart);
 
-    // Tab Filters
     elements.filterTabs.forEach(tab => {
         tab.addEventListener('click', (e) => {
             elements.filterTabs.forEach(t => t.classList.remove('active'));
@@ -78,9 +72,8 @@ function setupEventListeners() {
         });
     });
 
-    // Smooth scroll navigation links
-    const navLinks = document.querySelectorAll('nav ul li a, .logo');
-    navLinks.forEach(link => {
+    // Smooth scroll nav
+    document.querySelectorAll('nav ul li a, .logo').forEach(link => {
         link.addEventListener('click', (e) => {
             const href = link.getAttribute('href');
             if (href && href.startsWith('#')) {
@@ -88,34 +81,24 @@ function setupEventListeners() {
                 const target = document.querySelector(href);
                 if (target) {
                     target.scrollIntoView({ behavior: 'smooth' });
-                    // Highlight active
-                    if (link.tagName === 'A' && link.parentElement.parentElement.tagName === 'UL') {
-                        document.querySelectorAll('nav ul li a').forEach(l => l.classList.remove('active'));
-                        link.classList.add('active');
-                    }
+                    document.querySelectorAll('nav ul li a').forEach(l => l.classList.remove('active'));
+                    if (link.tagName === 'A' && link.closest('nav')) link.classList.add('active');
                 }
             }
         });
     });
 
-    // Choose by Category grids list click
-    const catCards = document.querySelectorAll('.category-card');
-    catCards.forEach(card => {
+    // Category cards click
+    document.querySelectorAll('.category-card').forEach(card => {
         card.addEventListener('click', () => {
             const cat = card.getAttribute('data-cat');
             elements.filterTabs.forEach(t => {
-                if (t.dataset.filter === cat) {
-                    t.click();
-                }
+                if (t.dataset.filter === cat) t.click();
             });
-            const collSection = document.getElementById('collection');
-            if (collSection) {
-                collSection.scrollIntoView({ behavior: 'smooth' });
-            }
+            document.getElementById('collection')?.scrollIntoView({ behavior: 'smooth' });
         });
     });
 
-    // Checkout panels switches
     elements.toCheckoutBtn.addEventListener('click', () => {
         elements.cartIndexView.style.display = 'none';
         elements.cartCheckoutView.style.display = 'flex';
@@ -128,182 +111,164 @@ function setupEventListeners() {
         elements.cartIndexView.style.display = 'flex';
     });
 
-    // Place Order submission
     elements.checkoutForm.addEventListener('submit', handleCheckout);
-
-    // Close Custom alert modal
     elements.alertCloseBtn.addEventListener('click', () => {
         elements.alertOverlay.classList.remove('active');
     });
 }
 
-// Fetch products from config DB
+// Fetch products
 async function fetchProductsAndRender() {
     try {
         const data = await CONFIG.getDbData();
         state.products = data.products || [];
         renderProducts();
     } catch (error) {
-        console.error("Error loading shop products:", error);
-        showAlert('error', 'Retrieval Error', 'Could not sync products data. Using offline caches.');
+        console.error("Error loading products:", error);
+        showAlert('error', 'Error', 'Could not load products.');
     } finally {
         elements.pageLoader.classList.add('hidden');
     }
 }
 
-// Helper to create product card HTML
+// Create product card HTML
 function createProductCardHTML(product) {
     const sStock = parseInt(product.stock_s) || 0;
     const mStock = parseInt(product.stock_m) || 0;
     const lStock = parseInt(product.stock_l) || 0;
     const totalStock = sStock + mStock + lStock;
-
-    // Check discount rates
     const originPrice = parseFloat(product.price) || 0;
     const salePrice = parseFloat(product.sale_price) || 0;
     const hasDiscount = salePrice > 0 && salePrice < originPrice;
-
-    // Selected size representation
     let selectedSize = state.selectedSizes[product.id] || '';
 
-    // Render dynamic badges
+    // Badge
     let badgeHTML = '';
-    if (totalStock === 0) {
-        badgeHTML = `<span class="badge badge-empty">Sold Out</span>`;
-    } else if (hasDiscount) {
-        const discountPct = Math.round(((originPrice - salePrice) / originPrice) * 100);
-        badgeHTML = `<span class="badge badge-sale">-${discountPct}% Sale</span>`;
+    if (totalStock === 0) badgeHTML = `<span class="badge badge-empty">Sold Out</span>`;
+    else if (hasDiscount) {
+        const pct = Math.round(((originPrice - salePrice) / originPrice) * 100);
+        badgeHTML = `<span class="badge badge-sale">-${pct}% OFF</span>`;
     } else if (product.is_top === true || String(product.is_top).toLowerCase() === 'true') {
         badgeHTML = `<span class="badge badge-top">Top Selling</span>`;
-    } else if (totalStock <= 5) {
-        badgeHTML = `<span class="badge badge-low-stock">Low Stock</span>`;
-    }
+    } else if (totalStock <= 5) badgeHTML = `<span class="badge badge-low-stock">Low Stock</span>`;
 
-    // Dynamic Image box
-    let imgBlockHTML = '';
+    // Image
+    let imgHTML = '';
     if (product.image_url && product.image_url.trim() !== '') {
-        imgBlockHTML = `<img src="${product.image_url.replace(/"/g, '&quot;')}" alt="${product.name}" onerror="handleImageError(this, '${product.name.replace(/'/g, "\\'")}')">`;
+        imgHTML = `<img src="${product.image_url.replace(/"/g, '&quot;')}" alt="${product.name}" onerror="handleImageError(this, '${product.name.replace(/'/g, "\\'")}')">`;
     } else {
-        imgBlockHTML = `
-            <div class="img-placeholder-card">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-              <span>${product.name}</span>
-            </div>
-        `;
+        imgHTML = `<div class="img-placeholder-card"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg><span>${product.name}</span></div>`;
     }
 
-    // Current price representation HTML
-    let priceHTML = '';
-    if (hasDiscount) {
-        priceHTML = `
-            <span class="price-discounted">$${salePrice.toFixed(2)}</span>
-            <span class="price-original">$${originPrice.toFixed(2)}</span>
-        `;
-    } else {
-        priceHTML = `<span class="price-current">$${originPrice.toFixed(2)}</span>`;
-    }
+    // Price
+    let priceHTML = hasDiscount
+        ? `<span class="price-discounted">RS ${salePrice.toFixed(0)}</span><span class="price-original">RS ${originPrice.toFixed(0)}</span>`
+        : `<span class="price-current">RS ${originPrice.toFixed(0)}</span>`;
 
-    // Size stocks indicators
-    let stockNoticeText = '';
-    if (selectedSize) {
-        const count = selectedSize === 'S' ? sStock : selectedSize === 'M' ? mStock : lStock;
-        if (count === 0) {
-            stockNoticeText = 'Selected size is out of stock!';
-        } else if (count <= 3) {
-            stockNoticeText = `Only ${count} left in ${selectedSize}!`;
+    // Stock indicator
+    let stockHTML = '';
+    if (totalStock === 0) stockHTML = `<span class="stock-indicator stock-out">Out of Stock</span>`;
+    else if (totalStock <= 5) stockHTML = `<span class="stock-indicator stock-low">Only ${totalStock} left!</span>`;
+    else stockHTML = `<span class="stock-indicator stock-in">${totalStock} in Stock</span>`;
+
+    // Color dots
+    let colorsHTML = '';
+    if (product.colors && product.colors.trim() !== '') {
+        const colorsList = product.colors.split(',').map(c => c.trim()).filter(c => c);
+        if (colorsList.length > 0) {
+            colorsHTML = `<div class="color-dots">`;
+            colorsList.forEach(color => {
+                colorsHTML += `<span class="color-dot" style="background-color: ${color};" title="${color}"></span>`;
+            });
+            colorsHTML += `</div>`;
         }
     }
 
-    return `
-      <div class="product-img-box">
-        ${badgeHTML}
-        ${imgBlockHTML}
-      </div>
-      <div class="product-info">
-        <div class="product-meta">
-          <span class="product-cat">${product.category}</span>
-        </div>
-        <h3 class="product-name">${product.name}</h3>
-        <p class="product-desc">${product.description || 'No description provided.'}</p>
-        
-        <div class="product-price-row">
-          ${priceHTML}
-        </div>
+    // Size stock notice
+    let stockNotice = '';
+    if (selectedSize) {
+        const count = selectedSize === 'S' ? sStock : selectedSize === 'M' ? mStock : lStock;
+        if (count === 0) stockNotice = 'Out of stock in this size!';
+        else if (count <= 3) stockNotice = `Only ${count} left in ${selectedSize}!`;
+    }
 
+    return `
+      <div class="product-img-box">${badgeHTML}${imgHTML}</div>
+      <div class="product-info">
+        <div class="product-meta"><span class="product-cat">${product.category}</span></div>
+        <h3 class="product-name">${product.name}</h3>
+        <p class="product-desc">${product.description || 'Premium quality product.'}</p>
+        <div class="product-price-row">${priceHTML}</div>
+        ${stockHTML}
+        ${colorsHTML}
         <div class="size-selector-wrap">
           <div class="selector-title">
             <span>Select Size</span>
-            <span style="color: var(--danger); font-size:0.7rem; font-weight:600;" id="stock-notice-${product.id}">${stockNoticeText}</span>
+            <span style="color: var(--danger); font-size:0.7rem; font-weight:600;" id="stock-notice-${product.id}">${stockNotice}</span>
           </div>
           <div class="size-pills">
-            <button class="size-pill ${selectedSize === 'S' ? 'active' : ''}" ${sStock === 0 ? 'disabled' : ''} data-id="${product.id}" data-size="S" title="${sStock} items in stock">S</button>
-            <button class="size-pill ${selectedSize === 'M' ? 'active' : ''}" ${mStock === 0 ? 'disabled' : ''} data-id="${product.id}" data-size="M" title="${mStock} items in stock">M</button>
-            <button class="size-pill ${selectedSize === 'L' ? 'active' : ''}" ${lStock === 0 ? 'disabled' : ''} data-id="${product.id}" data-size="L" title="${lStock} items in stock">L</button>
+            <button class="size-pill ${selectedSize === 'S' ? 'active' : ''}" ${sStock === 0 ? 'disabled' : ''} data-id="${product.id}" data-size="S" title="${sStock} in stock">S</button>
+            <button class="size-pill ${selectedSize === 'M' ? 'active' : ''}" ${mStock === 0 ? 'disabled' : ''} data-id="${product.id}" data-size="M" title="${mStock} in stock">M</button>
+            <button class="size-pill ${selectedSize === 'L' ? 'active' : ''}" ${lStock === 0 ? 'disabled' : ''} data-id="${product.id}" data-size="L" title="${lStock} in stock">L</button>
           </div>
         </div>
-
         <button class="add-cart-btn" id="add-btn-${product.id}" ${totalStock === 0 ? 'disabled' : ''}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
           <span>${totalStock === 0 ? 'Sold Out' : 'Add to Bag'}</span>
         </button>
       </div>
     `;
 }
 
-// Helper to attach event listeners to card
 function attachCardEvents(card, product) {
     const sStock = parseInt(product.stock_s) || 0;
     const mStock = parseInt(product.stock_m) || 0;
     const lStock = parseInt(product.stock_l) || 0;
 
-    // Size pills selection
     card.querySelectorAll('.size-pill').forEach(pill => {
         pill.addEventListener('click', (e) => {
+            e.stopPropagation();
             const prodId = e.target.dataset.id;
             const sizeVal = e.target.dataset.size;
-
             state.selectedSizes[prodId] = sizeVal;
-
-            const pills = card.querySelectorAll('.size-pill');
-            pills.forEach(p => p.classList.remove('active'));
+            card.querySelectorAll('.size-pill').forEach(p => p.classList.remove('active'));
             e.target.classList.add('active');
-
             const noticeEl = card.querySelector(`#stock-notice-${prodId}`);
             const count = sizeVal === 'S' ? sStock : sizeVal === 'M' ? mStock : lStock;
-            if (count <= 3 && count > 0) {
-                noticeEl.textContent = `Only ${count} left in ${sizeVal}!`;
-            } else {
-                noticeEl.textContent = '';
-            }
+            if (count <= 3 && count > 0) noticeEl.textContent = `Only ${count} left in ${sizeVal}!`;
+            else noticeEl.textContent = '';
         });
     });
 
-    // Add to cart click
-    card.querySelector('.add-cart-btn').addEventListener('click', () => {
-        const selectedSize = state.selectedSizes[product.id];
-        if (!selectedSize) {
-            showAlert('error', 'Select Size', 'Please choose a size (S, M, or L) before adding to your bag.');
-            return;
-        }
-        addToCart(product, selectedSize);
+    const addBtn = card.querySelector('.add-cart-btn');
+    if (addBtn) {
+        addBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const selectedSize = state.selectedSizes[product.id];
+            if (!selectedSize) {
+                showAlert('error', 'Select Size', 'Please choose a size before adding to bag.');
+                return;
+            }
+            addToCart(product, selectedSize);
+        });
+    }
+
+    // Click card to go to product detail page
+    card.addEventListener('click', () => {
+        window.location.href = `product.html?id=${product.id}`;
     });
 }
 
-// Render Products catalog grid based on categories
+// Render products
 function renderProducts() {
-    // 1. Render Top Selling Grid
+    // Top Selling Grid
     if (elements.topSellingGrid) {
         elements.topSellingGrid.innerHTML = '';
-        const topSellingProducts = state.products.filter(p => p.is_top === true || String(p.is_top).toLowerCase() === 'true');
-
-        if (topSellingProducts.length === 0) {
-            elements.topSellingGrid.innerHTML = `
-              <div class="empty-catalog-sub" style="grid-column: 1 / -1; text-align: center; padding: 40px; background-color: var(--bg-secondary); border-radius: var(--radius); border: 1px dashed var(--border);">
-                <p style="color: var(--text-secondary);">No featured products marked as top selling yet.</p>
-              </div>
-            `;
+        const topProducts = state.products.filter(p => p.is_top === true || String(p.is_top).toLowerCase() === 'true');
+        if (topProducts.length === 0) {
+            elements.topSellingGrid.innerHTML = `<div class="empty-catalog" style="grid-column:1/-1;padding:40px;"><p style="color:var(--text-secondary)">No featured products yet.</p></div>`;
         } else {
-            topSellingProducts.forEach(product => {
+            topProducts.forEach(product => {
                 const card = document.createElement('div');
                 card.className = 'product-card';
                 card.innerHTML = createProductCardHTML(product);
@@ -313,26 +278,17 @@ function renderProducts() {
         }
     }
 
-    // 2. Render Collection Grid
+    // Collection Grid
     if (elements.productsGrid) {
         elements.productsGrid.innerHTML = '';
         let filtered = [...state.products];
         if (state.currentFilter !== 'all') {
             filtered = filtered.filter(p => String(p.category).toLowerCase() === state.currentFilter);
         }
-
         if (filtered.length === 0) {
-            elements.productsGrid.innerHTML = `
-              <div class="empty-catalog">
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
-                <h3>No Products Available</h3>
-                <p>There are no products listed in this collection right now. Open the admin panel to add products and choose photos.</p>
-                <a href="admin.html" class="btn">Add Products Form</a>
-              </div>
-            `;
+            elements.productsGrid.innerHTML = `<div class="empty-catalog"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 8v8"/><path d="M8 12h8"/></svg><h3>No Products Available</h3><p>No products in this collection yet.</p></div>`;
             return;
         }
-
         filtered.forEach(product => {
             const card = document.createElement('div');
             card.className = 'product-card';
@@ -343,309 +299,185 @@ function renderProducts() {
     }
 }
 
-// Fallback error renderer if URL image fails to load
+// Image error fallback
 function handleImageError(imgNode, fallbackName) {
     const container = imgNode.parentNode;
     if (container) {
-        container.innerHTML = `
-      <div class="img-placeholder-card">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M21 15l-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/><circle cx="9" cy="9" r="2"/></svg>
-        <span>${fallbackName}</span>
-      </div>
-    `;
+        container.innerHTML = `<div class="img-placeholder-card"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M21 15l-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/><circle cx="9" cy="9" r="2"/></svg><span>${fallbackName || 'Product'}</span></div>`;
     }
 }
 
-// Add item to shopping cart state
+// ===== CART LOGIC =====
 function addToCart(product, size) {
-    // Validate stock level again
+    const existingItem = state.cart.find(i => i.id === product.id && i.size === size);
     const sizeStockKey = `stock_${size.toLowerCase()}`;
-    const maxAvailable = parseInt(product[sizeStockKey]) || 0;
+    const maxStock = parseInt(product[sizeStockKey]) || 0;
 
-    // Check if item of same ID and size exists in cart
-    const cartIndex = state.cart.findIndex(i => i.id === product.id && i.size === size);
-    const currentInCartQty = cartIndex !== -1 ? state.cart[cartIndex].quantity : 0;
-
-    if (currentInCartQty + 1 > maxAvailable) {
-        showAlert('error', 'Stock Limit', `Sorry, you cannot add more. Only ${maxAvailable} remaining for size ${size}.`);
-        return;
-    }
-
-    const price = parseFloat(product.sale_price) > 0 ? parseFloat(product.sale_price) : parseFloat(product.price);
-
-    if (cartIndex !== -1) {
-        state.cart[cartIndex].quantity += 1;
+    if (existingItem) {
+        if (existingItem.quantity >= maxStock) {
+            showAlert('error', 'Stock Limit', `Maximum available stock for size ${size} reached.`);
+            return;
+        }
+        existingItem.quantity++;
     } else {
+        if (maxStock <= 0) {
+            showAlert('error', 'Out of Stock', `Size ${size} is out of stock.`);
+            return;
+        }
         state.cart.push({
             id: product.id,
             name: product.name,
+            price: parseFloat(product.sale_price) > 0 && parseFloat(product.sale_price) < parseFloat(product.price) ? parseFloat(product.sale_price) : parseFloat(product.price),
+            image_url: product.image_url || '',
             size: size,
             quantity: 1,
-            price: price,
-            image: product.image_url
+            maxStock: maxStock
         });
     }
 
     saveCartToStorage();
-    updateCartUI();
-
-    // Clean size selection after adding to cart
-    delete state.selectedSizes[product.id];
-
-    // Re-render grid to clear styles
-    renderProducts();
-
-    // Slide open shopping drawer to give immediate feedback
+    renderCart();
     openCart();
+    showAlert('success', 'Added to Bag', `${product.name} (${size}) has been added to your shopping bag.`);
 }
 
-// Cart UI and updates
-function updateCartUI() {
-    // Update cart count bubble
-    const totalItemCount = state.cart.reduce((sum, item) => sum + item.quantity, 0);
-    elements.cartCountBubble.textContent = totalItemCount;
+function removeFromCart(index) {
+    state.cart.splice(index, 1);
+    saveCartToStorage();
+    renderCart();
+}
 
-    // Render list inside drawer
+function updateCartQuantity(index, newQty) {
+    if (newQty <= 0) { removeFromCart(index); return; }
+    if (newQty > state.cart[index].maxStock) {
+        showAlert('error', 'Stock Limit', 'Cannot exceed available stock.');
+        return;
+    }
+    state.cart[index].quantity = newQty;
+    saveCartToStorage();
+    renderCart();
+}
+
+function renderCart() {
     elements.cartItemsContainer.innerHTML = '';
+    elements.cartCountBubble.textContent = state.cart.reduce((sum, item) => sum + item.quantity, 0);
 
     if (state.cart.length === 0) {
-        elements.cartItemsContainer.innerHTML = `
-      <div class="empty-cart-state">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
-        <p>Your shopping bag is completely empty</p>
-      </div>
-    `;
+        elements.cartItemsContainer.innerHTML = `<div class="empty-cart-state"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg><p>Your bag is empty</p></div>`;
         elements.toCheckoutBtn.disabled = true;
-        updateSubtotals(0);
+        elements.cartSubtotal.textContent = 'RS 0';
+        elements.checkoutSubtotal.textContent = 'RS 0';
         return;
     }
 
-    elements.toCheckoutBtn.disabled = false;
-    let runningSubtotal = 0;
+    let subtotal = 0;
+    state.cart.forEach((item, index) => {
+        subtotal += item.price * item.quantity;
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'cart-item';
 
-    state.cart.forEach(item => {
-        const itemTotal = item.price * item.quantity;
-        runningSubtotal += itemTotal;
+        let imgHTML = item.image_url
+            ? `<img src="${item.image_url}" class="cart-item-img" alt="${item.name}" onerror="this.style.display='none'">`
+            : `<div class="cart-item-img-placeholder"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/></svg></div>`;
 
-        // Find item catalog detail for stock parameters boundary verification
-        const catalogItem = state.products.find(p => p.id === item.id);
-        const sizeStockKey = `stock_${item.size.toLowerCase()}`;
-        const maxAvailable = catalogItem ? parseInt(catalogItem[sizeStockKey]) : 99;
+        itemDiv.innerHTML = `
+            ${imgHTML}
+            <div class="cart-item-details">
+                <span class="cart-item-name">${item.name}</span>
+                <span class="cart-item-meta">Size: ${item.size} | RS ${item.price.toFixed(0)} each</span>
+                <div class="cart-item-qty-row">
+                    <div class="qty-selector">
+                        <button class="qty-btn qty-minus" ${item.quantity <= 1 ? 'disabled' : ''}>−</button>
+                        <span class="qty-val">${item.quantity}</span>
+                        <button class="qty-btn qty-plus" ${item.quantity >= item.maxStock ? 'disabled' : ''}>+</button>
+                    </div>
+                    <span class="cart-item-price">RS ${(item.price * item.quantity).toFixed(0)}</span>
+                    <button class="cart-item-delete" title="Remove item">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                    </button>
+                </div>
+            </div>
+        `;
 
-        const cartEl = document.createElement('div');
-        cartEl.className = 'cart-item';
-
-        let imgHTML = '';
-        if (item.image && item.image.trim() !== '') {
-            imgHTML = `<img src="${item.image}" alt="${item.name}" class="cart-item-img">`;
-        } else {
-            imgHTML = `
-        <div class="cart-item-img-placeholder">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-        </div>
-      `;
-        }
-
-        cartEl.innerHTML = `
-      ${imgHTML}
-      <div class="cart-item-details">
-        <span class="cart-item-name">${item.name}</span>
-        <span class="cart-item-meta">Size: ${item.size} • $${item.price.toFixed(2)}</span>
-        
-        <div class="cart-item-qty-row">
-          <div class="qty-selector">
-            <button class="qty-btn dec-qty" data-id="${item.id}" data-size="${item.size}">-</button>
-            <span class="qty-val">${item.quantity}</span>
-            <button class="qty-btn inc-qty" data-id="${item.id}" data-size="${item.size}" ${item.quantity >= maxAvailable ? 'disabled' : ''}>+</button>
-          </div>
-          <span class="cart-item-price">$${itemTotal.toFixed(2)}</span>
-          <button class="cart-item-delete" data-id="${item.id}" data-size="${item.size}" title="Remove from bag">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-          </button>
-        </div>
-      </div>
-    `;
-
-        // Hook list buttons actions
-        cartEl.querySelector('.dec-qty').addEventListener('click', () => updateQty(item.id, item.size, -1));
-        cartEl.querySelector('.inc-qty').addEventListener('click', () => updateQty(item.id, item.size, 1));
-        cartEl.querySelector('.cart-item-delete').addEventListener('click', () => removeCartItem(item.id, item.size));
-
-        elements.cartItemsContainer.appendChild(cartEl);
+        itemDiv.querySelector('.qty-minus').addEventListener('click', () => updateCartQuantity(index, item.quantity - 1));
+        itemDiv.querySelector('.qty-plus').addEventListener('click', () => updateCartQuantity(index, item.quantity + 1));
+        itemDiv.querySelector('.cart-item-delete').addEventListener('click', () => removeFromCart(index));
+        elements.cartItemsContainer.appendChild(itemDiv);
     });
 
-    updateSubtotals(runningSubtotal);
+    elements.cartSubtotal.textContent = `RS ${subtotal.toFixed(0)}`;
+    elements.checkoutSubtotal.textContent = `RS ${subtotal.toFixed(0)}`;
+    elements.toCheckoutBtn.disabled = false;
 }
 
-function updateSubtotals(sub) {
-    const formattedSub = `$${sub.toFixed(2)}`;
-    elements.cartSubtotal.textContent = formattedSub;
-    elements.checkoutSubtotal.textContent = formattedSub;
-}
+function openCart() { elements.cartDrawer.classList.add('active'); elements.cartOverlayBg.classList.add('active'); document.body.style.overflow = 'hidden'; }
+function closeCart() { elements.cartDrawer.classList.remove('active'); elements.cartOverlayBg.classList.remove('active'); document.body.style.overflow = ''; }
 
-// Update Cart Quantity levels
-function updateQty(id, size, change) {
-    const index = state.cart.findIndex(i => i.id === id && i.size === size);
-    if (index === -1) return;
-
-    const catalogItem = state.products.find(p => p.id === id);
-    const sizeStockKey = `stock_${size.toLowerCase()}`;
-    const maxAvailable = catalogItem ? parseInt(catalogItem[sizeStockKey]) : 99;
-
-    const newQty = state.cart[index].quantity + change;
-    if (newQty <= 0) {
-        state.cart = state.cart.filter(i => !(i.id === id && i.size === size));
-    } else if (newQty > maxAvailable) {
-        showAlert('error', 'Inventory Limit', `Sorry, you cannot order more. Limit for size ${size} is ${maxAvailable}.`);
-        return;
-    } else {
-        state.cart[index].quantity = newQty;
-    }
-
-    saveCartToStorage();
-    updateCartUI();
-    renderProducts(); // Update size pills disabling state
-}
-
-// Remove item completely
-function removeCartItem(id, size) {
-    state.cart = state.cart.filter(i => !(i.id === id && i.size === size));
-    saveCartToStorage();
-    updateCartUI();
-    renderProducts();
-}
-
-// Storage triggers
-function saveCartToStorage() {
-    localStorage.setItem('boutique_cart', JSON.stringify(state.cart));
-}
-
-function loadCartFromStorage() {
-    const saved = localStorage.getItem('boutique_cart');
-    if (saved) {
-        try {
-            state.cart = JSON.parse(saved);
-            updateCartUI();
-        } catch (ex) {
-            state.cart = [];
-        }
-    }
-}
-
-// Cart Drawer Slider Toggles
-function openCart() {
-    elements.cartDrawer.classList.add('active');
-    elements.cartOverlayBg.classList.add('active');
-    document.body.style.overflow = 'hidden'; // Stop page scrolling
-}
-
-function closeCart() {
-    elements.cartDrawer.classList.remove('active');
-    elements.cartOverlayBg.classList.remove('active');
-    document.body.style.overflow = 'auto'; // Resume page scrolling
-
-    // Reset back to main cart view when drawers close
-    setTimeout(() => {
-        elements.cartCheckoutView.style.display = 'none';
-        elements.cartCheckoutView.classList.remove('active');
-        elements.cartIndexView.style.display = 'flex';
-        elements.checkoutForm.reset();
-    }, 400);
-}
-
-// Checkout form submission handler
+// Checkout
 async function handleCheckout(e) {
     e.preventDefault();
+    const name = document.getElementById('custName').value.trim();
+    const phone = document.getElementById('custPhone').value.trim();
+    const address = document.getElementById('custAddress').value.trim();
+    if (!name || !phone || !address) { showAlert('error', 'Missing Info', 'Please fill all fields.'); return; }
 
-    // Validate cart is full
-    if (state.cart.length === 0) {
-        showAlert('error', 'Checkout Fail', 'Your cart is empty.');
-        return;
-    }
-
-    // Load inputs
-    const nameVal = document.getElementById('custName').value.trim();
-    const phoneVal = document.getElementById('custPhone').value.trim();
-    const addressVal = document.getElementById('custAddress').value.trim();
-
-    if (!nameVal || !phoneVal || !addressVal) {
-        showAlert('error', 'Missing inputs', 'Please enter your Name, Phone, and Address details.');
-        return;
-    }
-
-    // Lock action button
-    elements.submitOrderBtn.disabled = true;
-    elements.submitOrderBtn.innerHTML = '<span class="spinner"></span> Place Order';
-
-    const orderId = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
-    const orderTotal = state.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
+    const subtotal = state.cart.reduce((s, i) => s + (i.price * i.quantity), 0);
     const orderPayload = {
-        order_id: orderId,
-        date: new Date().toLocaleString(),
-        name: nameVal,
-        phone: phoneVal,
-        address: addressVal,
-        items: state.cart.map(item => ({
-            id: item.id,
-            name: item.name,
-            size: item.size,
-            quantity: item.quantity,
-            price: item.price
-        })),
-        total: orderTotal,
-        status: 'Pending'
+        action: 'placeOrder',
+        order: {
+            order_id: 'ORD-' + Date.now(),
+            date: new Date().toLocaleString(),
+            name: name,
+            phone: phone,
+            address: address,
+            items: state.cart.map(i => ({ id: i.id, name: i.name, size: i.size, quantity: i.quantity, price: i.price })),
+            total: subtotal,
+            status: 'Pending'
+        }
     };
 
-    try {
-        const result = await CONFIG.postDbAction({
-            action: 'placeOrder',
-            order: orderPayload
-        });
+    elements.submitOrderBtn.disabled = true;
+    elements.submitOrderBtn.innerHTML = '<span class="spinner"></span> Processing...';
 
+    try {
+        const result = await CONFIG.postDbAction(orderPayload);
         if (result.success) {
-            // Clear local storefront cart state
+            showAlert('success', 'Order Placed!', 'Thank you! Your order has been received.');
             state.cart = [];
             saveCartToStorage();
-            updateCartUI();
-
+            renderCart();
+            elements.checkoutForm.reset();
+            elements.cartCheckoutView.style.display = 'none';
+            elements.cartCheckoutView.classList.remove('active');
+            elements.cartIndexView.style.display = 'flex';
             closeCart();
-
-            // Show Custom Success Confirmation Modal
-            showAlert('success', 'Order Placed!', `Thank you for shopping with us, ${nameVal}. Your order ID is <strong>${orderId}</strong>. Stock has been deducted.`);
-
-            // Reload products list again to reflect updated sheet stock
-            fetchProductsAndRender();
         } else {
-            showAlert('error', 'Checkout Error', result.message || 'We could not complete your order. Try again.');
+            showAlert('error', 'Order Failed', result.message || 'Could not process order.');
         }
     } catch (error) {
-        console.error("Order submission critical error:", error);
-        showAlert('error', 'Connection Error', 'Failed to communicate with Google Sheet. Try again later.');
+        console.error('Checkout error:', error);
+        showAlert('error', 'Network Error', 'Order submission failed.');
     } finally {
-        // Release place button lock
         elements.submitOrderBtn.disabled = false;
-        elements.submitOrderBtn.innerHTML = 'Place Order';
+        elements.submitOrderBtn.innerHTML = '<span>Place Order</span>';
     }
 }
 
-// Alert Notification Dialogue engine
-function showAlert(type, title, message) {
-    // Set Icon
-    elements.alertIcon.className = 'alert-icon';
-    if (type === 'success') {
-        elements.alertIcon.classList.add('alert-icon-success');
-        elements.alertIcon.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-    `;
-    } else {
-        elements.alertIcon.classList.add('alert-icon-error');
-        elements.alertIcon.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-    `;
-    }
+// Storage
+function saveCartToStorage() { localStorage.setItem('starjean_cart', JSON.stringify(state.cart)); }
+function loadCartFromStorage() {
+    const saved = localStorage.getItem('starjean_cart');
+    if (saved) { state.cart = JSON.parse(saved); renderCart(); }
+}
 
+// Alert
+function showAlert(type, title, message) {
+    const iconHTML = type === 'success'
+        ? `<div class="alert-icon alert-icon-success"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>`
+        : `<div class="alert-icon alert-icon-error"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>`;
+
+    elements.alertIcon.innerHTML = iconHTML;
     elements.alertTitle.textContent = title;
-    elements.alertMsg.innerHTML = message;
+    elements.alertMsg.textContent = message;
     elements.alertOverlay.classList.add('active');
 }

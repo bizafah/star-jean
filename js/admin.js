@@ -1,4 +1,4 @@
-// Admin Dashboard Controller Logic
+// Star-Jean Admin Dashboard Controller Logic
 
 // Local State
 let products = [];
@@ -25,10 +25,12 @@ const elements = {
     formResetBtn: document.getElementById('formResetBtn'),
     prodId: document.getElementById('prodId'),
     prodImageUrl: document.getElementById('prodImageUrl'),
+    prodImageFile: document.getElementById('prodImageFile'),
     imagePreviewContainer: document.getElementById('imagePreviewContainer'),
     imagePreviewPlaceholder: document.getElementById('imagePreviewPlaceholder'),
     prodName: document.getElementById('prodName'),
     prodCategory: document.getElementById('prodCategory'),
+    prodColors: document.getElementById('prodColors'),
     prodDescription: document.getElementById('prodDescription'),
     prodPrice: document.getElementById('prodPrice'),
     prodSalePrice: document.getElementById('prodSalePrice'),
@@ -38,6 +40,18 @@ const elements = {
     stockL: document.getElementById('stockL'),
     submitProductBtn: document.getElementById('submitProductBtn'),
 
+    // Choice Elements
+    choiceUrlBtn: document.getElementById('choiceUrlBtn'),
+    choiceFileBtn: document.getElementById('choiceFileBtn'),
+    urlInputContainer: document.getElementById('urlInputContainer'),
+    fileInputContainer: document.getElementById('fileInputContainer'),
+
+    // Security Overlay Elements
+    loginOverlay: document.getElementById('loginOverlay'),
+    passwordInput: document.getElementById('passwordInput'),
+    loginSubmitBtn: document.getElementById('loginSubmitBtn'),
+    loginError: document.getElementById('loginError'),
+
     // Tables
     productsTableBody: document.getElementById('productsTableBody'),
     ordersTableBody: document.getElementById('ordersTableBody')
@@ -45,18 +59,38 @@ const elements = {
 
 // Initialize Admin
 document.addEventListener('DOMContentLoaded', () => {
+    checkAuthentication();
     setupEventListeners();
-    fetchAdminData();
+    setupImageSourceToggle();
+    document.body.style.opacity = '1';
 
-    // Display simulated DB banner if URL config is empty
     if (!CONFIG.API_URL) {
         elements.adminDemoBanner.style.display = 'flex';
     }
 });
 
-// Setup Listeners
+// Authentication System
+function checkAuthentication() {
+    const isAuthed = sessionStorage.getItem('starjean_auth') === 'true';
+    if (isAuthed) {
+        elements.loginOverlay.style.display = 'none';
+        document.getElementById('dashboardContainer').style.display = 'block';
+        fetchAdminData();
+    } else {
+        elements.loginOverlay.style.display = 'flex';
+        document.getElementById('dashboardContainer').style.display = 'none';
+    }
+}
+
+// Setup Event Listeners
 function setupEventListeners() {
-    // Tabs Switches
+    // Password authentication trigger handler
+    elements.loginSubmitBtn.addEventListener('click', attemptLogin);
+    elements.passwordInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') attemptLogin();
+    });
+
+    // Tab buttons trigger
     elements.tabBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
             elements.tabBtns.forEach(b => b.classList.remove('active'));
@@ -68,400 +102,464 @@ function setupEventListeners() {
         });
     });
 
-    // Pasting Image URL Event for Live Thumbnail Preview
+    // URL preview triggers
     elements.prodImageUrl.addEventListener('input', updateImagePreview);
     elements.prodImageUrl.addEventListener('change', updateImagePreview);
 
-    // Form Reset Trigger
+    // FileReader uploader converter to Base64
+    elements.prodImageFile.addEventListener('change', handleFileSelectorUploader);
+
+    // Form Reset Button
     elements.formResetBtn.addEventListener('click', resetForm);
 
-    // Form Submission
+    // Saving and updating product elements
     elements.productForm.addEventListener('submit', handleProductSave);
 }
 
-// Fetch spreadsheet/local data
+// Image Choice selector views toggle handler
+function setupImageSourceToggle() {
+    elements.choiceUrlBtn.addEventListener('click', () => {
+        elements.choiceUrlBtn.classList.add('active');
+        elements.choiceFileBtn.classList.remove('active');
+        elements.urlInputContainer.style.display = 'block';
+        elements.fileInputContainer.style.display = 'none';
+    });
+
+    elements.choiceFileBtn.addEventListener('click', () => {
+        elements.choiceFileBtn.classList.add('active');
+        elements.choiceUrlBtn.classList.remove('active');
+        elements.fileInputContainer.style.display = 'block';
+        elements.urlInputContainer.style.display = 'none';
+    });
+}
+
+// Attempt login matching password to star-jean123
+function attemptLogin() {
+    const entered = elements.passwordInput.value.trim();
+    if (entered === 'star-jean123') {
+        sessionStorage.setItem('starjean_auth', 'true');
+        elements.loginOverlay.style.opacity = '0';
+        setTimeout(() => {
+            elements.loginOverlay.style.display = 'none';
+            document.getElementById('dashboardContainer').style.display = 'block';
+            fetchAdminData();
+        }, 300);
+    } else {
+        elements.loginError.style.display = 'block';
+        elements.passwordInput.value = '';
+        elements.passwordInput.focus();
+    }
+}
+
+// Read selected JPEG/PNG file as base64 string DataUri
+function handleFileSelectorUploader(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 2000000) {
+        showToast('error', 'Select a smaller photo file (below 2MB) for persistence bounds.');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const base64 = event.target.result;
+        elements.prodImageUrl.value = base64;
+        updateImagePreview();
+        showToast('success', 'Image file read successfully!');
+    };
+    reader.onerror = () => {
+        showToast('error', 'Could not read image file.');
+    };
+    reader.readAsDataURL(file);
+}
+
+// Fetch Admin logs
 async function fetchAdminData() {
     try {
         const data = await CONFIG.getDbData();
         products = data.products || [];
         orders = data.orders || [];
-
         updateDashboardUI();
     } catch (error) {
-        console.error("Dashboard failed to retrieve dataset:", error);
-        showToast('error', 'Database connection error.');
+        console.error("Dashboard dataset error:", error);
+        showToast('error', 'Database synchronization failed.');
     }
 }
 
-// Sync dashboard metric and tables
+// Render overall stats
 function updateDashboardUI() {
-    // 1. Stats Calculation
     elements.statProducts.textContent = products.length;
     elements.statOrders.textContent = orders.length;
     elements.ordersCountNum.textContent = orders.length;
 
-    let outOfStockCount = 0;
+    let outStock = 0;
     products.forEach(p => {
-        const sStock = parseInt(p.stock_s) || 0;
-        const mStock = parseInt(p.stock_m) || 0;
-        const lStock = parseInt(p.stock_l) || 0;
-        if (sStock + mStock + lStock === 0) {
-            outOfStockCount++;
-        }
+        const total = (parseInt(p.stock_s) || 0) + (parseInt(p.stock_m) || 0) + (parseInt(p.stock_l) || 0);
+        if (total === 0) outStock++;
     });
-    elements.statOutOfStock.textContent = outOfStockCount;
+    elements.statOutOfStock.textContent = outStock;
 
-    // Revenue sum
-    const revenueTotal = orders.reduce((sum, ord) => sum + (parseFloat(ord.total) || 0), 0);
-    elements.statRevenue.textContent = `$${revenueTotal.toFixed(2)}`;
+    const rev = orders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+    elements.statRevenue.textContent = `RS ${rev.toFixed(0)}`;
 
-    // 2. Render Tables
     renderProductsTable();
     renderOrdersTable();
 }
 
-// Render Products list inventory rows
+// Render inventory items grid table
 function renderProductsTable() {
     elements.productsTableBody.innerHTML = '';
 
     if (products.length === 0) {
         elements.productsTableBody.innerHTML = `
-      <tr>
-        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 40px 0;">
-          No products found in store catalog. Add one using the form on the left!
-        </td>
-      </tr>
-    `;
+            <tr>
+                <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 40px 0;">
+                    No products cataloged inside store database. Select "Upload Product" tab to start adding!
+                </td>
+            </tr>
+        `;
         return;
     }
 
-    products.forEach(prod => {
-        const sStock = parseInt(prod.stock_s) || 0;
-        const mStock = parseInt(prod.stock_m) || 0;
-        const lStock = parseInt(prod.stock_l) || 0;
+    products.forEach(p => {
+        const s = parseInt(p.stock_s) || 0;
+        const m = parseInt(p.stock_m) || 0;
+        const l = parseInt(p.stock_l) || 0;
+        const oPrice = parseFloat(p.price) || 0;
+        const sPrice = parseFloat(p.sale_price) || 0;
 
-        // Choose selected prices formatting
-        let priceCellHTML = '';
-        const originPrice = parseFloat(prod.price) || 0;
-        const salePrice = parseFloat(prod.sale_price) || 0;
-
-        if (salePrice > 0 && salePrice < originPrice) {
-            priceCellHTML = `
-        <strong style="color: var(--danger); font-size: 0.95rem;">$${salePrice.toFixed(2)}</strong><br>
-        <span style="text-decoration: line-through; color: var(--text-muted); font-size: 0.8rem;">$${originPrice.toFixed(2)}</span>
-      `;
+        let priceHTML = '';
+        if (sPrice > 0 && sPrice < oPrice) {
+            priceHTML = `
+                <strong style="color:var(--danger)">RS ${sPrice.toFixed(0)}</strong><br>
+                <span style="text-decoration:line-through; font-size:0.75rem; color:var(--text-muted)">RS ${oPrice.toFixed(0)}</span>
+            `;
         } else {
-            priceCellHTML = `<strong>$${originPrice.toFixed(2)}</strong>`;
+            priceHTML = `<strong>RS ${oPrice.toFixed(0)}</strong>`;
         }
 
-        // Grid layout for individual stocks
-        const sizeStockHTML = `
-      <div class="stock-badge-grid">
-        <span class="size-stock-tag ${sStock === 0 ? 'empty' : ''}">S: ${sStock}</span>
-        <span class="size-stock-tag ${mStock === 0 ? 'empty' : ''}">M: ${mStock}</span>
-        <span class="size-stock-tag ${lStock === 0 ? 'empty' : ''}">L: ${lStock}</span>
-      </div>
-    `;
+        // Render stock tags values
+        const stockHTML = `
+            <div style="display:flex; gap:6px;">
+                <span class="size-stock-tag ${s === 0 ? 'empty' : ''}" style="padding: 2px 6px; border-radius:4px; font-size:0.75rem; font-weight:600; border: 1px solid var(--border-color);">S: ${s}</span>
+                <span class="size-stock-tag ${m === 0 ? 'empty' : ''}" style="padding: 2px 6px; border-radius:4px; font-size:0.75rem; font-weight:600; border: 1px solid var(--border-color);">M: ${m}</span>
+                <span class="size-stock-tag ${l === 0 ? 'empty' : ''}" style="padding: 2px 6px; border-radius:4px; font-size:0.75rem; font-weight:600; border: 1px solid var(--border-color);">L: ${l}</span>
+            </div>
+        `;
 
-        // Dynamic Image Column element
-        let imageCellHTML = '';
-        if (prod.image_url && prod.image_url.trim() !== '') {
-            imageCellHTML = `<img src="${prod.image_url.replace(/"/g, '&quot;')}" class="tbl-prod-img" alt="" onerror="handleTableImageError(this)">`;
+        // Render thumbnail img
+        let imgHTML = '';
+        if (p.image_url && p.image_url.trim() !== '') {
+            imgHTML = `<img src="${p.image_url.replace(/"/g, '&quot;')}" style="width:48px; height:56px; object-fit:cover; border-radius:4px;" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=80';">`;
         } else {
-            imageCellHTML = `
-        <div class="tbl-placeholder-img">
-          <svg style="width: 18px; height: 18px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-        </div>
-      `;
+            imgHTML = `<div style="width:48px;height:56px;background:#E5E7EB;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#9CA3AF"><svg style="width:16px;height:16px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>`;
+        }
+
+        // Available colors selector
+        let colorsListHTML = '';
+        if (p.colors && p.colors.trim() !== '') {
+            const list = p.colors.split(',').map(c => c.trim()).filter(c => c);
+            list.forEach(c => {
+                colorsListHTML += `<span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:${c}; border: 1px solid var(--border-color); margin-right:4px;" title="${c}"></span>`;
+            });
+        } else {
+            colorsListHTML = '<span style="font-size:0.75rem; color:var(--text-muted)">None</span>';
         }
 
         const row = document.createElement('tr');
         row.innerHTML = `
-      <td>${imageCellHTML}</td>
-      <td>
-        <div style="font-weight: 600; font-size: 0.95rem;">${prod.name}</div>
-        <div style="font-size: 0.75rem; color: var(--text-muted); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${prod.description || 'No description'}</div>
-      </td>
-      <td>
-        <span class="admin-badge admin-badge-category">${prod.category}</span>
-        ${prod.is_top ? '<span class="admin-badge admin-badge-top" style="margin-top: 4px; display:inline-block;">Top</span>' : ''}
-      </td>
-      <td>${priceCellHTML}</td>
-      <td>${sizeStockHTML}</td>
-      <td>
-        <div class="action-buttons">
-          <button class="action-btn edit" data-id="${prod.id}" title="Edit product parameters">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-          </button>
-          <button class="action-btn delete" data-id="${prod.id}" title="Delete product">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-          </button>
-        </div>
-      </td>
-    `;
+            <td>${imgHTML}</td>
+            <td>
+                <div style="font-weight:600;">${p.name}</div>
+                <div style="font-size:0.75rem; color:var(--text-muted); cursor:pointer;" onclick="navigator.clipboard.writeText('${p.id}'); showToast('success', 'Copied ID!')">ID: ${p.id}</div>
+            </td>
+            <td><span class="admin-badge admin-badge-category" style="background:#E0F2FE; color:#0369A1; padding: 2px 8px; border-radius:4px; font-size:0.75rem; text-transform:uppercase; font-weight:600;">${p.category}</span></td>
+            <td>${colorsListHTML}</td>
+            <td>${priceHTML}</td>
+            <td>${stockHTML}</td>
+            <td>
+                <div class="action-buttons" style="display:flex; gap:8px; justify-content:center;">
+                    <button class="action-btn edit" data-id="${p.id}" title="Edit product" style="background:#FEF3C7; color:#D97706; border:none; padding:6px; border-radius:4px; cursor:pointer;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                    </button>
+                    <button class="action-btn delete" data-id="${p.id}" title="Delete product" style="background:#FEE2E2; color:#DC2626; border:none; padding:6px; border-radius:4px; cursor:pointer;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                    </button>
+                </div>
+            </td>
+        `;
 
-        // Hook click actions
-        row.querySelector('.edit').addEventListener('click', () => fillFormForEdit(prod));
-        row.querySelector('.delete').addEventListener('click', () => deleteProduct(prod.id));
-
+        row.querySelector('.edit').addEventListener('click', () => fillFormForEdit(p));
+        row.querySelector('.delete').addEventListener('click', () => deleteProduct(p.id));
         elements.productsTableBody.appendChild(row);
     });
 }
 
-// Fallback image handler for tables
-function handleTableImageError(imgNode) {
-    const cell = imgNode.parentNode;
-    if (cell) {
-        cell.innerHTML = `
-      <div class="tbl-placeholder-img">
-        <svg style="width: 18px; height: 18px; color: var(--danger);" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-      </div>
-    `;
-    }
-}
-
-// Render Orders collection logs
+// Render Orders transaction logs listing
 function renderOrdersTable() {
     elements.ordersTableBody.innerHTML = '';
-
     if (orders.length === 0) {
         elements.ordersTableBody.innerHTML = `
-      <tr>
-        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 40px 0;">
-          No customer checkout transactions registered yet.
-        </td>
-      </tr>
-    `;
+            <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 40px 0;">
+                    No orders registered in the system.
+                </td>
+            </tr>
+        `;
         return;
     }
 
-    // Draw in descending order of dates
-    const sortedOrders = [...orders].reverse();
-
-    sortedOrders.forEach(ord => {
-        // Generate inline items representation
+    const sorted = [...orders].reverse();
+    sorted.forEach(ord => {
         let itemsHTML = '';
         if (Array.isArray(ord.items)) {
-            itemsHTML = ord.items.map(i => `
-        <span class="order-item-tag">${i.name} (${i.size}) x${i.quantity}</span>
-      `).join('');
+            itemsHTML = ord.items.map(i => `<span class="order-item-tag" style="background:#F3F4F6; margin-right:4px; margin-bottom:4px; padding:2px 8px; border-radius:4px; font-size:0.75rem; display:inline-block; border: 1px solid var(--border-color);">${i.name} (${i.size}) x${i.quantity}</span>`).join('');
         } else {
-            itemsHTML = `<span class="order-item-tag">${ord.items}</span>`;
+            itemsHTML = `<span class="order-item-tag" style="background:#F3F4F6; padding:2px 8px; border-radius:4px; font-size:0.75rem;">${ord.items}</span>`;
         }
 
         const row = document.createElement('tr');
         row.innerHTML = `
-      <td><strong style="color: var(--accent-hover); font-size: 0.85rem;">${ord.order_id}</strong></td>
-      <td>
-        <div style="font-weight:600; font-size:0.9rem;">${ord.name}</div>
-        <div style="font-size:0.75rem; color: var(--text-muted);">${ord.date}</div>
-      </td>
-      <td>
-        <div style="font-size:0.85rem; font-weight:500;">📞 ${ord.phone}</div>
-        <div style="font-size:0.75rem; color: var(--text-muted); line-height: 1.3; margin-top:2px;">📍 ${ord.address}</div>
-      </td>
-      <td class="order-items-col">${itemsHTML}</td>
-      <td><strong style="font-size:1rem;">$${(parseFloat(ord.total) || 0).toFixed(2)}</strong></td>
-      <td>
-        <span class="admin-badge admin-badge-${String(ord.status).toLowerCase()}">${ord.status}</span>
-      </td>
-    `;
+            <td><strong style="color:#0369A1">${ord.order_id}</strong></td>
+            <td>
+                <div style="font-weight:600;">${ord.name}</div>
+                <div style="font-size:0.75rem; color:var(--text-muted);">${ord.date}</div>
+            </td>
+            <td>
+                <div style="font-size:0.85rem; font-weight:500;">📞 ${ord.phone}</div>
+                <div style="font-size:0.75rem; color:var(--text-muted); max-width:200px; overflow:hidden; text-overflow:ellipsis;" title="${ord.address}">📍 ${ord.address}</div>
+            </td>
+            <td class="order-items-col">${itemsHTML}</td>
+            <td><strong>RS ${(parseFloat(ord.total) || 0).toFixed(0)}</strong></td>
+            <td>
+                <select class="status-select-btn" data-id="${ord.order_id}" style="padding:4px 8px; border-radius:4px; border: 1px solid var(--border-color); font-size:0.8rem; font-weight:600; cursor:pointer;">
+                    <option value="Pending" ${ord.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                    <option value="Completed" ${ord.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                    <option value="Shipped" ${ord.status === 'Shipped' ? 'selected' : ''}>Shipped</option>
+                    <option value="Cancelled" ${ord.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+                </select>
+            </td>
+        `;
+
+        row.querySelector('.status-select-btn').addEventListener('change', (e) => {
+            updateOrderStatus(ord.order_id, e.target.value);
+        });
 
         elements.ordersTableBody.appendChild(row);
     });
 }
 
-// Update Image Live Preview box URL
+// Update Order status values callback
+async function updateOrderStatus(ordId, newStatus) {
+    showToast('info', 'Updating order status...');
+    try {
+        const res = await CONFIG.postDbAction({
+            action: 'updateOrderStatus',
+            order_id: ordId,
+            status: newStatus
+        });
+        if (res.success) {
+            showToast('success', 'Order status updated successfully.');
+            fetchAdminData();
+        } else {
+            showToast('error', res.message || 'Could not update order status.');
+        }
+    } catch (e) {
+        console.error(e);
+        showToast('error', 'Connection failure updating order status.');
+    }
+}
+
+// Live Image URL resolve preview update box
 function updateImagePreview() {
     const url = elements.prodImageUrl.value.trim();
-
     if (url === '') {
         elements.imagePreviewPlaceholder.style.display = 'block';
-
-        // Clear previous img element if existing
-        const existingImg = elements.imagePreviewContainer.querySelector('img');
-        if (existingImg) existingImg.remove();
+        const img = elements.imagePreviewContainer.querySelector('img');
+        if (img) img.remove();
         return;
     }
 
     elements.imagePreviewPlaceholder.style.display = 'none';
-
     let img = elements.imagePreviewContainer.querySelector('img');
     if (!img) {
         img = document.createElement('img');
+        img.style.width = '120px';
+        img.style.height = '140px';
+        img.style.objectFit = 'cover';
+        img.style.borderRadius = '8px';
+        img.style.border = '1px solid var(--border-color)';
         elements.imagePreviewContainer.appendChild(img);
     }
-
     img.src = url;
     img.onerror = () => {
-        // If invalid image resolves, show error notice on label
         elements.imagePreviewPlaceholder.style.display = 'block';
         if (img) img.remove();
-        showToast('error', 'Product photo URL cannot be loaded.');
+        showToast('error', 'Image path cannot resolve correctly.');
     };
 }
 
-// Product save button processor: Handles Add / Edit Actions
+// Fill Form for Editing Mode
+function fillFormForEdit(product) {
+    editingProductId = product.id;
+    elements.formPanelTitle.textContent = `Edit Catalog Product: ${product.name}`;
+    elements.submitProductBtn.querySelector('span').textContent = 'Update Product';
+
+    // Populate values
+    elements.prodId.value = product.id;
+    elements.prodImageUrl.value = product.image_url || '';
+    elements.prodName.value = product.name;
+    elements.prodCategory.value = product.category;
+    elements.prodColors.value = product.colors || '';
+    elements.prodDescription.value = product.description || '';
+    elements.prodPrice.value = product.price;
+    elements.prodSalePrice.value = product.sale_price > 0 ? product.sale_price : '';
+    elements.prodIsTop.checked = product.is_top === true || String(product.is_top).toLowerCase() === 'true';
+
+    elements.stockS.value = product.stock_s || 0;
+    elements.stockM.value = product.stock_m || 0;
+    elements.stockL.value = product.stock_l || 0;
+
+    updateImagePreview();
+
+    // Trigger URL tab choice visible since editing loads the URL
+    elements.choiceUrlBtn.click();
+
+    // Switch panels to tabBtnUpload view.
+    elements.tabBtnUpload.click();
+}
+
+// Reset Form Inputs
+function resetForm() {
+    editingProductId = null;
+    elements.formPanelTitle.textContent = 'Add New Product Details';
+    elements.submitProductBtn.querySelector('span').textContent = 'Add Product';
+
+    elements.productForm.reset();
+    elements.prodId.value = '';
+    elements.prodImageFile.value = '';
+
+    elements.imagePreviewPlaceholder.style.display = 'block';
+    const img = elements.imagePreviewContainer.querySelector('img');
+    if (img) img.remove();
+}
+
+// Handle product additions or update edits save operation
 async function handleProductSave(e) {
     e.preventDefault();
 
     const nameVal = elements.prodName.value.trim();
     const catVal = elements.prodCategory.value;
+    const colorsVal = elements.prodColors.value.trim();
     const descVal = elements.prodDescription.value.trim();
     const priceVal = parseFloat(elements.prodPrice.value) || 0;
     const salePriceVal = parseFloat(elements.prodSalePrice.value) || 0;
     const imageUrlVal = elements.prodImageUrl.value.trim();
     const isTopVal = elements.prodIsTop.checked;
 
-    // Stock sizing units
     const sQty = parseInt(elements.stockS.value) || 0;
     const mQty = parseInt(elements.stockM.value) || 0;
     const lQty = parseInt(elements.stockL.value) || 0;
 
-    // Validation
     if (salePriceVal > 0 && salePriceVal >= priceVal) {
         showToast('error', 'Sale price must be lower than original price!');
         return;
     }
 
-    // Generate ID if create block, otherwise preserve existing
-    const targetId = editingProductId ? editingProductId : 'PROD-' + Math.floor(100000 + Math.random() * 900000);
+    const idVal = editingProductId ? editingProductId : 'PROD-' + Date.now();
 
-    // Block Submission Form Button & Load spiner
     elements.submitProductBtn.disabled = true;
-    elements.submitProductBtn.innerHTML = '<span class="admin-spinner"></span> Saving...';
+    elements.submitProductBtn.innerHTML = '<span class="spinner" style="border-top-color:#111827"></span> Saving...';
 
-    const productPayload = {
-        id: targetId,
-        name: nameVal,
-        category: catVal,
-        description: descVal,
-        image_url: imageUrlVal,
-        price: priceVal,
-        sale_price: salePriceVal,
-        is_top: isTopVal,
-        stock_s: sQty,
-        stock_m: mQty,
-        stock_l: lQty
+    const payload = {
+        action: 'saveProduct',
+        product: {
+            id: idVal,
+            name: nameVal,
+            category: catVal,
+            colors: colorsVal,
+            description: descVal,
+            image_url: imageUrlVal,
+            price: priceVal,
+            sale_price: salePriceVal,
+            is_top: isTopVal,
+            stock_s: sQty,
+            stock_m: mQty,
+            stock_l: lQty
+        }
     };
 
     try {
-        const result = await CONFIG.postDbAction({
-            action: 'saveProduct',
-            product: productPayload
-        });
-
-        if (result.success) {
-            showToast('success', editingProductId ? 'Product updated successfully!' : 'Product added successfully!');
-
+        const res = await CONFIG.postDbAction(payload);
+        if (res.success) {
+            showToast('success', editingProductId ? 'Product details updated!' : 'Product uploaded successfully!');
             resetForm();
-            fetchAdminData(); // Refresh metrics and lists tables
+            fetchAdminData();
+            // Automatically switch back to product list pane on success
+            elements.tabBtnProducts.click();
         } else {
-            showToast('error', result.message || 'Error occurred while saving product.');
+            showToast('error', res.message || 'Error occurred while saving.');
         }
-    } catch (error) {
-        console.error("Critical error saving product item description:", error);
-        showToast('error', 'Network failure saving product details.');
+    } catch (err) {
+        console.error(err);
+        showToast('error', 'Connection error while saving product details.');
     } finally {
-        // Release action panel lock
         elements.submitProductBtn.disabled = false;
-        elements.submitProductBtn.innerHTML = editingProductId ? 'Update Product' : 'Add Product';
+        elements.submitProductBtn.innerHTML = `<span>${editingProductId ? 'Update Product' : 'Add Product'}</span>`;
     }
 }
 
-// Edit actions: Fill form fields
-function fillFormForEdit(product) {
-    editingProductId = product.id;
-    elements.formPanelTitle.textContent = `Edit Product: ${product.name}`;
-    elements.submitProductBtn.textContent = 'Update Product';
-
-    // Load inputs
-    elements.prodId.value = product.id;
-    elements.prodImageUrl.value = product.image_url || '';
-    elements.prodName.value = product.name;
-    elements.prodCategory.value = product.category;
-    elements.prodDescription.value = product.description || '';
-    elements.prodPrice.value = product.price;
-    elements.prodSalePrice.value = product.sale_price || '';
-    elements.prodIsTop.checked = product.is_top === true;
-
-    elements.stockS.value = product.stock_s;
-    elements.stockM.value = product.stock_m;
-    elements.stockL.value = product.stock_l;
-
-    // Fire live picture rendering
-    updateImagePreview();
-
-    // Scroll smoothly to form box
-    document.getElementById('productForm').scrollIntoView({ behavior: 'smooth' });
-}
-
-// Delete item
+// Delete product catalog item helper
 async function deleteProduct(id) {
-    const prod = products.find(p => p.id === id);
-    if (!prod) return;
+    if (!confirm('Are you sure you want to permanently delete this product?')) return;
 
-    const conf = confirm(`Are you sure you want to permanently delete "${prod.name}" from your catalog store?`);
-    if (!conf) return;
-
+    showToast('info', 'Deleting product...');
     try {
-        const result = await CONFIG.postDbAction({
+        const res = await CONFIG.postDbAction({
             action: 'deleteProduct',
             id: id
         });
 
-        if (result.success) {
-            showToast('success', 'Product deleted successfully!');
-            if (editingProductId === id) {
-                resetForm();
-            }
+        if (res.success) {
+            showToast('success', 'Product completely deleted!');
+            if (editingProductId === id) resetForm();
             fetchAdminData();
         } else {
-            showToast('error', result.message || 'Error deleting product.');
+            showToast('error', res.message || 'Could not delete product.');
         }
-    } catch (error) {
-        console.error("Product removal failure:", error);
-        showToast('error', 'Failed to communicate deletion.');
+    } catch (e) {
+        console.error(e);
+        showToast('error', 'Network failure deleting product.');
     }
 }
 
-// Reset Form Inputs
-function resetForm() {
-    editingProductId = null;
-    elements.formPanelTitle.textContent = 'Add New Product';
-    elements.submitProductBtn.textContent = 'Add Product';
-
-    elements.productForm.reset();
-    elements.prodId.value = '';
-
-    // Clear image previews
-    elements.imagePreviewPlaceholder.style.display = 'block';
-    const img = elements.imagePreviewContainer.querySelector('img');
-    if (img) img.remove();
-}
-
-// Toast alerts engine
-function showToast(type, message) {
+// Toast Notifications popup manager
+function showToast(type, msg) {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
+    toast.style.background = type === 'success' ? '#D1FAE5' : type === 'error' ? '#FEE2E2' : '#E0F2FE';
+    toast.style.color = type === 'success' ? '#065F46' : type === 'error' ? '#991B1B' : '#0369A1';
+    toast.style.padding = '12px 20px';
+    toast.style.border = '1px solid currentColor';
+    toast.style.borderRadius = '6px';
+    toast.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1)';
+    toast.style.display = 'flex';
+    toast.style.justifyContent = 'space-between';
+    toast.style.alignItems = 'center';
+    toast.style.minWidth = '280px';
+    toast.style.animation = 'slideIn 0.3s forwards';
 
-    const icon = type === 'success' ? '✨' : '❌';
+    const emoji = type === 'success' ? '✨' : type === 'error' ? '❌' : 'ℹ️';
 
     toast.innerHTML = `
-    <span>${icon} ${message}</span>
-    <button class="toast-close">&times;</button>
-  `;
-
-    // Attach dismiss
-    toast.querySelector('.toast-close').addEventListener('click', () => {
-        toast.remove();
-    });
+        <span>${emoji} ${msg}</span>
+        <button class="toast-close" style="background:none; border:none; color:inherit; font-size:1.2rem; cursor:pointer;" onclick="this.parentNode.remove()">&times;</button>
+    `;
 
     elements.toastContainer.appendChild(toast);
-
-    // Auto dismiss after 3.5 seconds
     setTimeout(() => {
         toast.style.animation = 'slideOut 0.3s forwards';
         setTimeout(() => toast.remove(), 300);
-    }, 3500);
+    }, 4000);
 }
