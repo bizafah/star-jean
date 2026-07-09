@@ -13,6 +13,7 @@ const elements = {
     pageLoader: document.getElementById('pageLoader'),
     demoBanner: document.getElementById('demoBanner'),
     productsGrid: document.getElementById('productsGrid'),
+    topSellingGrid: document.getElementById('topSellingGrid'),
     filterTabs: document.querySelectorAll('.filter-tab'),
     cartCountBubble: document.getElementById('cartCountBubble'),
     cartDrawer: document.getElementById('cartDrawer'),
@@ -47,6 +48,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!CONFIG.API_URL) {
         elements.demoBanner.style.display = 'flex';
     }
+
+    // Start hero slideshow changing every 1 second
+    const slides = document.querySelectorAll('.hero-slide');
+    if (slides.length > 0) {
+        let currentSlide = 0;
+        setInterval(() => {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (currentSlide + 1) % slides.length;
+            slides[currentSlide].classList.add('active');
+        }, 1000); // 1 second
+    }
 });
 
 // Setup Events
@@ -66,20 +78,22 @@ function setupEventListeners() {
         });
     });
 
-    // Home Navigation Links
-    const navLinks = document.querySelectorAll('nav a, .logo');
+    // Smooth scroll navigation links
+    const navLinks = document.querySelectorAll('nav ul li a, .logo');
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
-            const cat = link.getAttribute('data-category');
-            if (cat) {
+            const href = link.getAttribute('href');
+            if (href && href.startsWith('#')) {
                 e.preventDefault();
-                // Set active filters tab
-                elements.filterTabs.forEach(t => {
-                    if (t.dataset.filter === cat) {
-                        t.click();
+                const target = document.querySelector(href);
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                    // Highlight active
+                    if (link.tagName === 'A' && link.parentElement.parentElement.tagName === 'UL') {
+                        document.querySelectorAll('nav ul li a').forEach(l => l.classList.remove('active'));
+                        link.classList.add('active');
                     }
-                });
-                document.getElementById('catalog').scrollIntoView({ behavior: 'smooth' });
+                }
             }
         });
     });
@@ -94,7 +108,10 @@ function setupEventListeners() {
                     t.click();
                 }
             });
-            document.getElementById('catalog').scrollIntoView({ behavior: 'smooth' });
+            const collSection = document.getElementById('collection');
+            if (collSection) {
+                collSection.scrollIntoView({ behavior: 'smooth' });
+            }
         });
     });
 
@@ -134,100 +151,70 @@ async function fetchProductsAndRender() {
     }
 }
 
-// Render Products catalog grid based on categories
-function renderProducts() {
-    elements.productsGrid.innerHTML = '';
+// Helper to create product card HTML
+function createProductCardHTML(product) {
+    const sStock = parseInt(product.stock_s) || 0;
+    const mStock = parseInt(product.stock_m) || 0;
+    const lStock = parseInt(product.stock_l) || 0;
+    const totalStock = sStock + mStock + lStock;
 
-    // Filter product items
-    let filtered = [...state.products];
-    if (state.currentFilter === 'top') {
-        filtered = filtered.filter(p => p.is_top === true);
-    } else if (state.currentFilter !== 'all') {
-        filtered = filtered.filter(p => String(p.category).toLowerCase() === state.currentFilter);
+    // Check discount rates
+    const originPrice = parseFloat(product.price) || 0;
+    const salePrice = parseFloat(product.sale_price) || 0;
+    const hasDiscount = salePrice > 0 && salePrice < originPrice;
+
+    // Selected size representation
+    let selectedSize = state.selectedSizes[product.id] || '';
+
+    // Render dynamic badges
+    let badgeHTML = '';
+    if (totalStock === 0) {
+        badgeHTML = `<span class="badge badge-empty">Sold Out</span>`;
+    } else if (hasDiscount) {
+        const discountPct = Math.round(((originPrice - salePrice) / originPrice) * 100);
+        badgeHTML = `<span class="badge badge-sale">-${discountPct}% Sale</span>`;
+    } else if (product.is_top === true || String(product.is_top).toLowerCase() === 'true') {
+        badgeHTML = `<span class="badge badge-top">Top Selling</span>`;
+    } else if (totalStock <= 5) {
+        badgeHTML = `<span class="badge badge-low-stock">Low Stock</span>`;
     }
 
-    // Draw empty warning if list is zero
-    if (filtered.length === 0) {
-        elements.productsGrid.innerHTML = `
-      <div class="empty-catalog">
-        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
-        <h3>No Products Available</h3>
-        <p>There are no products listed in this category right now. Open the admin panel to add products and choose photos.</p>
-        <a href="admin.html" class="btn">Add Products Form</a>
-      </div>
-    `;
-        return;
+    // Dynamic Image box
+    let imgBlockHTML = '';
+    if (product.image_url && product.image_url.trim() !== '') {
+        imgBlockHTML = `<img src="${product.image_url.replace(/"/g, '&quot;')}" alt="${product.name}" onerror="handleImageError(this, '${product.name.replace(/'/g, "\\'")}')">`;
+    } else {
+        imgBlockHTML = `
+            <div class="img-placeholder-card">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+              <span>${product.name}</span>
+            </div>
+        `;
     }
 
-    filtered.forEach(product => {
-        // Determine sizes stock parameters
-        const sStock = parseInt(product.stock_s) || 0;
-        const mStock = parseInt(product.stock_m) || 0;
-        const lStock = parseInt(product.stock_l) || 0;
-        const totalStock = sStock + mStock + lStock;
+    // Current price representation HTML
+    let priceHTML = '';
+    if (hasDiscount) {
+        priceHTML = `
+            <span class="price-discounted">$${salePrice.toFixed(2)}</span>
+            <span class="price-original">$${originPrice.toFixed(2)}</span>
+        `;
+    } else {
+        priceHTML = `<span class="price-current">$${originPrice.toFixed(2)}</span>`;
+    }
 
-        // Check discount rates
-        const originPrice = parseFloat(product.price) || 0;
-        const salePrice = parseFloat(product.sale_price) || 0;
-        const hasDiscount = salePrice > 0 && salePrice < originPrice;
-
-        // Choose selected size representation
-        let selectedSize = state.selectedSizes[product.id] || '';
-
-        // Make card container
-        const card = document.createElement('div');
-        card.className = 'product-card';
-
-        // Render dynamic badges
-        let badgeHTML = '';
-        if (totalStock === 0) {
-            badgeHTML = `<span class="badge badge-empty">Sold Out</span>`;
-        } else if (hasDiscount) {
-            const discountPct = Math.round(((originPrice - salePrice) / originPrice) * 100);
-            badgeHTML = `<span class="badge badge-sale">-${discountPct}% Sale</span>`;
-        } else if (product.is_top) {
-            badgeHTML = `<span class="badge badge-top">Top Selling</span>`;
-        } else if (totalStock <= 5) {
-            badgeHTML = `<span class="badge badge-low-stock">Low Stock</span>`;
+    // Size stocks indicators
+    let stockNoticeText = '';
+    if (selectedSize) {
+        const count = selectedSize === 'S' ? sStock : selectedSize === 'M' ? mStock : lStock;
+        if (count === 0) {
+            stockNoticeText = 'Selected size is out of stock!';
+        } else if (count <= 3) {
+            stockNoticeText = `Only ${count} left in ${selectedSize}!`;
         }
+    }
 
-        // Dynamic Image box (HTML or custom placeholder SVG)
-        let imgBlockHTML = '';
-        if (product.image_url && product.image_url.trim() !== '') {
-            imgBlockHTML = `<img src="${product.image_url.replace(/"/g, '&quot;')}" alt="${product.name}" onerror="handleImageError(this, '${product.name.replace(/'/g, "\\'")}')">`;
-        } else {
-            imgBlockHTML = `
-        <div class="img-placeholder-card">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-          <span>${product.name}</span>
-        </div>
-      `;
-        }
-
-        // Determine current price representation HTML
-        let priceHTML = '';
-        if (hasDiscount) {
-            priceHTML = `
-        <span class="price-discounted">$${salePrice.toFixed(2)}</span>
-        <span class="price-original">$${originPrice.toFixed(2)}</span>
-      `;
-        } else {
-            priceHTML = `<span class="price-current">$${originPrice.toFixed(2)}</span>`;
-        }
-
-        // Size stocks indicators
-        // If selected check specific stock
-        let stockNoticeText = '';
-        if (selectedSize) {
-            const count = selectedSize === 'S' ? sStock : selectedSize === 'M' ? mStock : lStock;
-            if (count === 0) {
-                stockNoticeText = 'Selected size is out of stock!';
-            } else if (count <= 3) {
-                stockNoticeText = `Only ${count} left in ${selectedSize}!`;
-            }
-        }
-
-        card.innerHTML = `
+    return `
       <div class="product-img-box">
         ${badgeHTML}
         ${imgBlockHTML}
@@ -261,44 +248,99 @@ function renderProducts() {
         </button>
       </div>
     `;
+}
 
-        // Hook listeners for size pills selection
-        card.querySelectorAll('.size-pill').forEach(pill => {
-            pill.addEventListener('click', (e) => {
-                const prodId = e.target.dataset.id;
-                const sizeVal = e.target.dataset.size;
+// Helper to attach event listeners to card
+function attachCardEvents(card, product) {
+    const sStock = parseInt(product.stock_s) || 0;
+    const mStock = parseInt(product.stock_m) || 0;
+    const lStock = parseInt(product.stock_l) || 0;
 
-                // Toggle active selection
-                state.selectedSizes[prodId] = sizeVal;
+    // Size pills selection
+    card.querySelectorAll('.size-pill').forEach(pill => {
+        pill.addEventListener('click', (e) => {
+            const prodId = e.target.dataset.id;
+            const sizeVal = e.target.dataset.size;
 
-                // Trigger small re-render check to adjust highlight pills and warnings
-                const pills = card.querySelectorAll('.size-pill');
-                pills.forEach(p => p.classList.remove('active'));
-                e.target.classList.add('active');
+            state.selectedSizes[prodId] = sizeVal;
 
-                // Dynamic Stock notice warning on card
-                const noticeEl = card.querySelector(`#stock-notice-${prodId}`);
-                const count = sizeVal === 'S' ? sStock : sizeVal === 'M' ? mStock : lStock;
-                if (count <= 3 && count > 0) {
-                    noticeEl.textContent = `Only ${count} left in ${sizeVal}!`;
-                } else {
-                    noticeEl.textContent = '';
-                }
-            });
-        });
+            const pills = card.querySelectorAll('.size-pill');
+            pills.forEach(p => p.classList.remove('active'));
+            e.target.classList.add('active');
 
-        // Add to cart click
-        card.querySelector('.add-cart-btn').addEventListener('click', () => {
-            const selectedSize = state.selectedSizes[product.id];
-            if (!selectedSize) {
-                showAlert('error', 'Select Size', 'Please choose a size (S, M, or L) before adding to your bag.');
-                return;
+            const noticeEl = card.querySelector(`#stock-notice-${prodId}`);
+            const count = sizeVal === 'S' ? sStock : sizeVal === 'M' ? mStock : lStock;
+            if (count <= 3 && count > 0) {
+                noticeEl.textContent = `Only ${count} left in ${sizeVal}!`;
+            } else {
+                noticeEl.textContent = '';
             }
-            addToCart(product, selectedSize);
         });
-
-        elements.productsGrid.appendChild(card);
     });
+
+    // Add to cart click
+    card.querySelector('.add-cart-btn').addEventListener('click', () => {
+        const selectedSize = state.selectedSizes[product.id];
+        if (!selectedSize) {
+            showAlert('error', 'Select Size', 'Please choose a size (S, M, or L) before adding to your bag.');
+            return;
+        }
+        addToCart(product, selectedSize);
+    });
+}
+
+// Render Products catalog grid based on categories
+function renderProducts() {
+    // 1. Render Top Selling Grid
+    if (elements.topSellingGrid) {
+        elements.topSellingGrid.innerHTML = '';
+        const topSellingProducts = state.products.filter(p => p.is_top === true || String(p.is_top).toLowerCase() === 'true');
+
+        if (topSellingProducts.length === 0) {
+            elements.topSellingGrid.innerHTML = `
+              <div class="empty-catalog-sub" style="grid-column: 1 / -1; text-align: center; padding: 40px; background-color: var(--bg-secondary); border-radius: var(--radius); border: 1px dashed var(--border);">
+                <p style="color: var(--text-secondary);">No featured products marked as top selling yet.</p>
+              </div>
+            `;
+        } else {
+            topSellingProducts.forEach(product => {
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                card.innerHTML = createProductCardHTML(product);
+                attachCardEvents(card, product);
+                elements.topSellingGrid.appendChild(card);
+            });
+        }
+    }
+
+    // 2. Render Collection Grid
+    if (elements.productsGrid) {
+        elements.productsGrid.innerHTML = '';
+        let filtered = [...state.products];
+        if (state.currentFilter !== 'all') {
+            filtered = filtered.filter(p => String(p.category).toLowerCase() === state.currentFilter);
+        }
+
+        if (filtered.length === 0) {
+            elements.productsGrid.innerHTML = `
+              <div class="empty-catalog">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
+                <h3>No Products Available</h3>
+                <p>There are no products listed in this collection right now. Open the admin panel to add products and choose photos.</p>
+                <a href="admin.html" class="btn">Add Products Form</a>
+              </div>
+            `;
+            return;
+        }
+
+        filtered.forEach(product => {
+            const card = document.createElement('div');
+            card.className = 'product-card';
+            card.innerHTML = createProductCardHTML(product);
+            attachCardEvents(card, product);
+            elements.productsGrid.appendChild(card);
+        });
+    }
 }
 
 // Fallback error renderer if URL image fails to load
