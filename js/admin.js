@@ -136,7 +136,7 @@ function setupImageSourceToggle() {
 // Attempt login matching password to star-jean123
 function attemptLogin() {
     const entered = elements.passwordInput.value.trim();
-    if (entered === 'star-jean123') {
+    if (entered === 'Star.jeans 819') {
         sessionStorage.setItem('starjean_auth', 'true');
         elements.loginOverlay.style.opacity = '0';
         setTimeout(() => {
