@@ -4,28 +4,193 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aura & Weave | Admin Board</title>
+    <title>Star-Jean | System Dashboard</title>
     <link rel="stylesheet" href="css/admin.css">
+    <style>
+        /* Security page styling */
+        .login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #111827;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            color: #FFF;
+            transition: all 0.5s ease;
+        }
+
+        .login-box {
+            background-color: #1F2937;
+            padding: 40px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5);
+            border: 1px solid #374151;
+        }
+
+        .login-logo {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 2.2rem;
+            margin-bottom: 8px;
+        }
+
+        .login-logo span {
+            color: #9CA3AF;
+        }
+
+        .login-box p {
+            color: #9CA3AF;
+            font-size: 0.9rem;
+            margin-bottom: 24px;
+        }
+
+        .login-input {
+            width: 100%;
+            background-color: #111827;
+            border: 1px solid #374151;
+            padding: 12px 16px;
+            border-radius: 6px;
+            color: #FFF;
+            font-size: 1rem;
+            text-align: center;
+            margin-bottom: 16px;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .login-input:focus {
+            border-color: #9CA3AF;
+        }
+
+        .login-btn {
+            width: 100%;
+            background-color: #FFFFFF;
+            color: #111827;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .login-btn:hover {
+            background-color: #E5E7EB;
+        }
+
+        .login-error {
+            color: #EF4444;
+            font-size: 0.85rem;
+            margin-bottom: 12px;
+            display: none;
+        }
+
+        /* Image selector mode switcher toggles */
+        .image-input-choice {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .img-choice-btn {
+            flex: 1;
+            padding: 8px;
+            background-color: #F3F4F6;
+            border: 1px solid #E5E7EB;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #4B5563;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .img-choice-btn.active {
+            background-color: #111827;
+            color: #FFF;
+            border-color: #111827;
+        }
+
+        .image-uploader-wrap {
+            margin-bottom: 12px;
+        }
+
+        /* File dropzone styling */
+        .dropzone-box {
+            border: 2px dashed #D1D5DB;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            background-color: #F9FAFB;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .dropzone-box:hover {
+            border-color: #111827;
+            background-color: #F3F4F6;
+        }
+
+        .dropzone-box input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .dropzone-msg {
+            color: #4B5563;
+            font-size: 0.85rem;
+        }
+
+        .dropzone-msg svg {
+            margin-bottom: 8px;
+            color: #9CA3AF;
+        }
+    </style>
 </head>
 
-<body>
+<body style="opacity: 0; transition: opacity 0.3s ease;">
 
-    <!-- Dynamic Database Alert Notice -->
-    <div id="adminDemoBanner"
-        style="background:#5B6976; color:#FAF9F6; text-align:center; padding:10px; font-size:0.85rem; font-weight:500; display:none; justify-content:center; align-items:center; gap:10px; margin-bottom: 20px; border-radius: 6px;">
-        <span>⚙️ Backend running in simulated localStorage mode. Setup sheet to persist data forever.</span>
-        <a href="instructions.md" target="_blank"
-            style="color:#C5A880; font-weight:600; text-decoration:underline;">View Instruction Guide</a>
+    <!-- Password Lock Screen Overlay -->
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-box">
+            <h1 class="login-logo">Star-<span>Jean</span></h1>
+            <p>Enter Master Password to Access Star-Jean Admin</p>
+            <div class="login-error" id="loginError">Incorrect Password. Please try again.</div>
+            <input type="password" class="login-input" id="passwordInput" placeholder="Password" autofocus>
+            <button class="login-btn" id="loginSubmitBtn">Access Admin Panel</button>
+        </div>
     </div>
 
-    <div class="dashboard-container">
+    <!-- Main Dashboard Container -->
+    <div class="dashboard-container" id="dashboardContainer" style="display: none;">
+
+        <!-- Simulated DB Banner Alert notice -->
+        <div id="adminDemoBanner"
+            style="background:#5B6976; color:#FAF9F6; text-align:center; padding:10px; font-size:0.85rem; font-weight:500; display:none; justify-content:center; align-items:center; gap:10px; margin-bottom: 20px; border-radius: 6px;">
+            <span>⚙️ Backend running in offline local fallback mode.</span>
+            <a href="instructions.md" target="_blank"
+                style="color:#FFF; font-weight:600; text-decoration:underline;">View Setup Guide to connect Google
+                Sheets</a>
+        </div>
 
         <!-- Dashboard Header -->
         <header class="admin-header">
             <div>
-                <h1>Aura & Weave <span>Dashboard</span></h1>
-                <p style="color: var(--text-muted); font-size:0.9rem;">Manage product catalog and track client orders.
-                </p>
+                <h1>Star-Jean <span>Dashboard</span></h1>
+                <p style="color: var(--text-muted); font-size:0.9rem;">Manage stock catalog, add product cards, and log
+                    customer checkout orders.</p>
             </div>
             <a href="index.html" class="back-to-shop-btn">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -38,9 +203,8 @@
             </a>
         </header>
 
-        <!-- Stats Cards Panel Grid -->
+        <!-- Stats Cards Grid Interface -->
         <section class="stats-grid">
-
             <div class="stat-card">
                 <div class="stat-content">
                     <h3>Total Products</h3>
@@ -63,7 +227,7 @@
                     <h3>Total Orders</h3>
                     <div class="stat-value" id="statOrders">0</div>
                 </div>
-                <div class="stat-icon success">
+                <div class="stat-icon success" style="background:#D1FAE5; color:#10B981;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="8" cy="21" r="1" />
@@ -78,7 +242,7 @@
                     <h3>Out of Stock</h3>
                     <div class="stat-value" id="statOutOfStock">0</div>
                 </div>
-                <div class="stat-icon warning">
+                <div class="stat-icon warning" style="background:#FEF3C7; color:#F59E0B;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10" />
@@ -91,155 +255,182 @@
             <div class="stat-card">
                 <div class="stat-content">
                     <h3>Revenue Earned</h3>
-                    <div class="stat-value" id="statRevenue">$0.00</div>
+                    <div class="stat-value" id="statRevenue">RS 0</div>
                 </div>
                 <div class="stat-icon success" style="background:#ECFDF5; color:#10B981;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="12" y1="1" x2="12" y2="23" />
-                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                        <span style="font-family:var(--font-serif); font-weight:700; font-size:1.1rem">RS</span>
                     </svg>
                 </div>
             </div>
-
         </section>
 
-        <!-- Navigation Tabs Menu -->
+        <!-- Navigation Tabs Menu Panel -->
         <div class="tab-menu">
-            <button class="tab-btn active" id="tabBtnProducts" data-pane="paneProducts">Manage Products</button>
+            <button class="tab-btn active" id="tabBtnUpload" data-pane="paneUpload">Upload Product</button>
+            <button class="tab-btn" id="tabBtnProducts" data-pane="paneProducts">Product Info / Inventory</button>
             <button class="tab-btn" id="tabBtnOrders" data-pane="paneOrders">Orders Log (<span
                     id="ordersCountNum">0</span>)</button>
         </div>
 
-        <!-- Active Panels -->
-        <!-- PANEL 1: Products Manager -->
-        <div class="tab-pane active" id="paneProducts">
-            <div class="manager-layout">
+        <!-- tab elements contents -->
+        <!-- TAB 1: Upload Product Form -->
+        <div class="tab-pane active" id="paneUpload">
+            <div class="panel" style="max-width: 700px; margin: 0 auto;">
+                <h2 class="panel-title" id="formPanelTitle">
+                    <span>Add New Product Details</span>
+                    <button class="btn btn-secondary" id="formResetBtn" style="padding:6px 12px; font-size:0.75rem;"
+                        type="button">Reset Form</button>
+                </h2>
 
-                <!-- LEFT: Add / Edit form -->
-                <div class="panel">
-                    <h2 class="panel-title" id="formPanelTitle">
-                        <span>Add New Product</span>
-                        <button class="btn btn-secondary" id="formResetBtn" style="padding:6px 12px; font-size:0.75rem;"
-                            type="button">Reset</button>
-                    </h2>
+                <form id="productForm">
+                    <input type="hidden" id="prodId">
 
-                    <form id="productForm">
-                        <!-- Hidden ID tag for updates -->
-                        <input type="hidden" id="prodId">
-
-                        <!-- Paste Photo Url Container & live preview box -->
-                        <div class="form-group">
-                            <label for="prodImageUrl">Product Image URL</label>
-                            <input type="text" id="prodImageUrl" placeholder="https://images.unsplash.com/etc..."
-                                autocomplete="off">
+                    <!-- Photo Selector Selection Group -->
+                    <div class="form-group">
+                        <label>Image Source Choice</label>
+                        <div class="image-input-choice">
+                            <button type="button" class="img-choice-btn active" id="choiceUrlBtn">Paste URL
+                                Link</button>
+                            <button type="button" class="img-choice-btn" id="choiceFileBtn">Upload Photo File</button>
                         </div>
+                    </div>
 
-                        <!-- Live Image Thumbnail View -->
-                        <div class="image-preview-container" id="imagePreviewContainer">
-                            <div class="image-preview-placeholder" id="imagePreviewPlaceholder">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor" stroke-width="1.5">
-                                    <rect width="18" height="18" x="3" y="3" rx="2" />
-                                    <circle cx="9" cy="9" r="2" />
-                                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-                                </svg>
-                                <p>Image preview displays here dynamically when URL resolves.</p>
-                            </div>
+                    <!-- URL Input Box container -->
+                    <div id="urlInputContainer" class="form-group">
+                        <label for="prodImageUrl">Product Image URL</label>
+                        <input type="text" id="prodImageUrl" placeholder="https://images.unsplash.com/etc..."
+                            autocomplete="off">
+                    </div>
+
+                    <!-- File Dropzone container -->
+                    <div id="fileInputContainer" class="image-uploader-wrap" style="display: none;">
+                        <label>Upload From Computer</label>
+                        <div class="dropzone-box">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="17 8 12 3 7 8" />
+                                <line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
+                            <div class="dropzone-msg">Drag photos here or click to browse</div>
+                            <input type="file" id="prodImageFile" accept="image/*">
                         </div>
+                    </div>
 
-                        <div class="form-group">
-                            <label for="prodName">Product Name</label>
-                            <input type="text" id="prodName" placeholder="Classic Premium Tee" required>
+                    <!-- Live Image Preview Thumbnail View box -->
+                    <div class="image-preview-container" id="imagePreviewContainer" style="margin-bottom: 20px;">
+                        <div class="image-preview-placeholder" id="imagePreviewPlaceholder">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor" stroke-width="1.5">
+                                <rect width="18" height="18" x="3" y="3" rx="2" />
+                                <circle cx="9" cy="9" r="2" />
+                                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                            </svg>
+                            <p>Image preview displays here dynamically when URL resolves or file loads.</p>
                         </div>
+                    </div>
 
+                    <div class="form-group">
+                        <label for="prodName">Product Name</label>
+                        <input type="text" id="prodName" placeholder="Classic Denim T-Shirt" required>
+                    </div>
+
+                    <div class="form-row">
                         <div class="form-group">
-                            <label for="prodCategory">Category</label>
+                            <label for="prodCategory">Category Grid Section</label>
                             <select id="prodCategory" required>
                                 <option value="" disabled selected>Select category...</option>
-                                <option value="shirts">Shirts (T-Shirts & Tops)</option>
-                                <option value="jeans">Jeans (Denim & Pants)</option>
+                                <option value="shirts">Shirts (T-Shirts)</option>
+                                <option value="jeans">Jeans (Denim)</option>
                                 <option value="hoodies">Hoodies (Sweatshirts)</option>
                             </select>
                         </div>
 
                         <div class="form-group">
-                            <label for="prodDescription">Description</label>
-                            <textarea id="prodDescription"
-                                placeholder="Hand-woven organic cotton tee, soft fit and feel..." required></textarea>
+                            <label for="prodColors">Available Color Options (optional)</label>
+                            <input type="text" id="prodColors" placeholder="e.g. #000, #fff, red, #00ff00">
                         </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="prodPrice">Base Price ($)</label>
-                                <input type="number" id="prodPrice" placeholder="45.00" step="0.01" min="0" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="prodSalePrice">Sale price ($)</label>
-                                <input type="number" id="prodSalePrice" placeholder="Leave empty if none" step="0.01"
-                                    min="0">
-                            </div>
-                        </div>
-
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="prodIsTop">
-                            <label for="prodIsTop">Feature in <strong>Top Selling</strong> category</label>
-                        </div>
-
-                        <!-- Size Stock levels inputs -->
-                        <h4 class="stock-headline">Size Stock Levels</h4>
-                        <div class="stock-row">
-                            <div class="form-group">
-                                <label for="stockS">Stock S</label>
-                                <input type="number" id="stockS" placeholder="0" min="0" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="stockM">Stock M</label>
-                                <input type="number" id="stockM" placeholder="0" min="0" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="stockL">Stock L</label>
-                                <input type="number" id="stockL" placeholder="0" min="0" required>
-                            </div>
-                        </div>
-
-                        <div class="form-actions">
-                            <button class="btn btn-primary" type="submit" id="submitProductBtn">
-                                <span>Add Product</span>
-                            </button>
-                        </div>
-
-                    </form>
-                </div>
-
-                <!-- RIGHT: Inventory Database Table -->
-                <div class="panel" style="padding-bottom: 12px;">
-                    <h2 class="panel-title">Active Store Products</h2>
-
-                    <div class="table-responsive">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th style="width: 70px;">Image</th>
-                                    <th>Product Details</th>
-                                    <th>Category</th>
-                                    <th>Prices</th>
-                                    <th>Stock (S/M/L)</th>
-                                    <th style="width: 100px; text-align: center;">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="productsTableBody">
-                                <!-- Products listings generated via js -->
-                            </tbody>
-                        </table>
                     </div>
 
-                </div>
+                    <div class="form-group">
+                        <label for="prodDescription">Product Description</label>
+                        <textarea id="prodDescription"
+                            placeholder="Detailed description of product fit, fabrics quality feel..."
+                            required></textarea>
+                    </div>
 
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="prodPrice">Original Price (RS)</label>
+                            <input type="number" id="prodPrice" placeholder="e.g. 2500" step="1" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="prodSalePrice">Sale price (RS - optional)</label>
+                            <input type="number" id="prodSalePrice" placeholder="Leave empty if none" step="1" min="0">
+                        </div>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="prodIsTop">
+                        <label for="prodIsTop">Feature in <strong>Top Selling</strong> category grid</label>
+                    </div>
+
+                    <!-- Size Stock levels inputs -->
+                    <h4 class="stock-headline" style="margin-top: 24px; font-weight:600;">Size Stock Management</h4>
+                    <div class="stock-row" style="margin-bottom: 24px;">
+                        <div class="form-group">
+                            <label for="stockS">Stock S</label>
+                            <input type="number" id="stockS" value="0" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="stockM">Stock M</label>
+                            <input type="number" id="stockM" value="0" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="stockL">Stock L</label>
+                            <input type="number" id="stockL" value="0" min="0" required>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn btn-primary" type="submit" id="submitProductBtn">
+                            <span>Add Product</span>
+                        </button>
+                    </div>
+
+                </form>
             </div>
         </div>
 
-        <!-- PANEL 2: Orders Log -->
+        <!-- TAB 2: Table list view of products details -->
+        <div class="tab-pane" id="paneProducts">
+            <div class="panel">
+                <h2 class="panel-title">Active Store Products List / Catalog</h2>
+
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 70px;">Image</th>
+                                <th>Product Details</th>
+                                <th>Category</th>
+                                <th>Available Colors</th>
+                                <th>Prices</th>
+                                <th>Size Stock (S/M/L)</th>
+                                <th style="width: 100px; text-align: center;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productsTableBody">
+                            <!-- Products listings generated via js -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: Orders Logs -->
         <div class="tab-pane" id="paneOrders">
             <div class="panel">
                 <h2 class="panel-title">Customer Order Logs</h2>
@@ -266,10 +457,9 @@
 
     </div>
 
-    <!-- Toast Notification Pop Alert container -->
+    <!-- Toast Notification container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <!-- Scripts -->
     <script src="js/config.js"></script>
     <script src="js/admin.js"></script>
 </body>

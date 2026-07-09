@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Star-Jean | Product Details</title>
+    <meta name="description"
+        content="View product specifications, color variants, size stocks, and add to shopping bag.">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Specific Styles for Product Details View */
+        .product-detail-section {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 24px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            transition: var(--transition);
+        }
+
+        .back-link:hover {
+            color: var(--text-primary);
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 60px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 48px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .detail-img-box {
+            width: 100%;
+            height: 600px;
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: #ECEAE6;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+
+        .detail-img-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .detail-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detail-cat {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: var(--text-secondary);
+            letter-spacing: 0.15em;
+            margin-bottom: 12px;
+        }
+
+        .detail-name {
+            font-size: 2.5rem;
+            font-weight: 500;
+            line-height: 1.2;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+        }
+
+        .detail-price-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .detail-price-current {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .detail-price-discounted {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--danger);
+        }
+
+        .detail-price-original {
+            font-size: 1.3rem;
+            text-decoration: line-through;
+            color: var(--text-secondary);
+        }
+
+        .detail-desc {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin-bottom: 32px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* Interactive Detail Selectors */
+        .selector-group {
+            margin-bottom: 28px;
+        }
+
+        .selector-header {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .color-selector {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .color-option {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .color-option:hover {
+            transform: scale(1.1);
+        }
+
+        .color-option.active {
+            border-color: #111827;
+            box-shadow: 0 0 0 2px #FFFFFF, 0 0 0 4px #111827;
+        }
+
+        .detail-size-pills {
+            display: flex;
+            gap: 12px;
+        }
+
+        .detail-size-pill {
+            width: 60px;
+            height: 48px;
+            border: 1px solid var(--border);
+            background: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .detail-size-pill:hover:not(:disabled) {
+            border-color: #111827;
+            background-color: var(--accent-light);
+        }
+
+        .detail-size-pill.active {
+            background-color: #111827;
+            color: #FFFFFF;
+            border-color: #111827;
+        }
+
+        .detail-size-pill:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            text-decoration: line-through;
+            background-color: #F3F1ED;
+        }
+
+        .qty-wrap {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-top: 12px;
+        }
+
+        .action-row {
+            display: flex;
+            gap: 20px;
+            margin-top: 40px;
+        }
+
+        .detail-add-btn {
+            flex-grow: 1;
+            padding: 16px;
+            font-size: 1rem;
+        }
+
+        /* Detail Stock Levels Section Info */
+        .stock-level-tags {
+            display: flex;
+            gap: 16px;
+            margin-top: 24px;
+            padding: 16px;
+            background-color: var(--accent-light);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .stock-tag {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .stock-tag strong {
+            color: var(--text-primary);
+        }
+
+        @media (max-width: 900px) {
+            .detail-grid {
+                grid-template-columns: 1fr;
+                gap: 40px;
+                padding: 24px;
+            }
+
+            .detail-img-box {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Page Preloader -->
+    <div class="page-loader" id="pageLoader">
+        <div class="loader-logo">Star-<span>Jean</span></div>
+        <div class="loader-bar"></div>
+    </div>
+
+    <!-- Header Navigation -->
+    <header>
+        <div class="nav-container">
+            <a href="index.html" class="logo" id="brandLogo">
+                Star-<span>Jean</span>
+            </a>
+
+            <nav>
+                <ul>
+                    <li><a href="index.html#hero">Home</a></li>
+                    <li><a href="index.html#top-selling">Top Selling</a></li>
+                    <li><a href="index.html#categories">Categories</a></li>
+                    <li><a href="index.html#collection">Collection</a></li>
+                    <li><a href="index.html#contact">Contact</a></li>
+                </ul>
+            </nav>
+
+            <div class="nav-actions">
+                <button class="cart-btn" id="openCartBtn" aria-label="Open Cart">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+                        <path d="M3 6h18" />
+                        <path d="M16 10a4 4 0 0 1-8 0" />
+                    </svg>
+                    <span class="cart-count" id="cartCountBubble">0</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="product-detail-section">
+        <!-- Back Link Button -->
+        <a href="index.html" class="back-link">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 12H5" />
+                <path d="m12 19-7-7 7-7" />
+            </svg>
+            Back to Shop Catalog
+        </a>
+
+        <!-- Product Grid Details layout container -->
+        <div class="detail-grid" id="detailGrid">
+            <!-- Loading Placeholder -->
+            <div style="grid-column: 1 / -1; text-align: center; padding: 100px 0;">
+                <span class="spinner" style="border-top-color: #111827; width: 32px; height: 32px;"></span>
+                <p style="margin-top: 16px; color: var(--text-secondary);">Syncing product configuration...</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-col">
+                <h4 style="font-family: var(--font-serif); font-size:1.4rem;">Star-Jean</h4>
+                <p>Premium wardrobe essentials for boys, men, ladies, and girls. Quality fabrics, ethical manufacturing.
+                </p>
+            </div>
+            <div class="footer-col">
+                <h4>Collection</h4>
+                <ul class="footer-links">
+                    <li><a href="index.html#collection">T-Shirts</a></li>
+                    <li><a href="index.html#collection">Jeans</a></li>
+                    <li><a href="index.html#collection">Hoodies</a></li>
+                    <li><a href="index.html#top-selling">Top Selling</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Support</h4>
+                <ul class="footer-links">
+                    <li><a href="#">Size Chart Guide</a></li>
+                    <li><a href="#">Shipping & Returns</a></li>
+                    <li><a href="#">Terms & Conditions</a></li>
+                    <li><a href="#">Privacy Policy</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Connect</h4>
+                <p>Get in touch with our team.</p>
+                <p style="font-weight: 600;">+92 311 4098312</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Star-Jean. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Side Cart Drawer Backdrop -->
+    <div class="cart-overlay-bg" id="cartOverlayBg"></div>
+
+    <!-- Sliding Cart Drawer Panel -->
+    <div class="cart-drawer" id="cartDrawer">
+        <!-- Cart Index View -->
+        <div id="cartIndexView" style="display: flex; flex-direction: column; height: 100%;">
+            <div class="cart-header">
+                <h3>Shopping Bag</h3>
+                <button class="cart-close" id="closeCartBtn">&times;</button>
+            </div>
+
+            <div class="cart-body">
+                <div id="cartItemsContainer" class="cart-items-list"></div>
+            </div>
+
+            <div class="cart-footer">
+                <div class="cart-subtotal-row">
+                    <span class="subtotal-label">Subtotal</span>
+                    <span class="subtotal-val" id="cartSubtotal">RS 0</span>
+                </div>
+                <button class="checkout-btn" id="toCheckoutBtn" disabled>Proceed to Checkout</button>
+            </div>
+        </div>
+
+        <!-- Shipping/Checkout Form View -->
+        <div id="cartCheckoutView" class="checkout-form-container"
+            style="flex-direction: column; height: 100%; padding: 24px; overflow-y: auto;">
+            <button class="checkout-back-btn" id="backToCartBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <path d="m12 19-7-7 7-7" />
+                    <path d="M19 12H5" />
+                </svg>
+                Back to Bag
+            </button>
+
+            <h3 class="checkout-header">Shipping Details</h3>
+
+            <form id="checkoutForm">
+                <div class="form-group">
+                    <label for="custName">Full Name</label>
+                    <input type="text" id="custName" placeholder="Your Name" required>
+                </div>
+                <div class="form-group">
+                    <label for="custPhone">Phone Number</label>
+                    <input type="text" id="custPhone" placeholder="+92 3XX XXXXXXX" required>
+                </div>
+                <div class="form-group">
+                    <label for="custAddress">Delivery Address</label>
+                    <textarea id="custAddress" placeholder="Your full delivery address" required></textarea>
+                </div>
+
+                <div style="border-top: 1px solid var(--border); padding-top: 16px; margin-top: 24px;">
+                    <div class="cart-subtotal-row" style="margin-bottom: 16px;">
+                        <span class="subtotal-label" style="font-size: 0.9rem;">Order Total</span>
+                        <span class="subtotal-val" id="checkoutSubtotal" style="font-size: 1.25rem;">RS 0</span>
+                    </div>
+                    <button type="submit" class="place-order-btn" id="submitOrderBtn">
+                        <span>Place Order</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Custom Alert Modal Dialog -->
+    <div class="alert-modal-overlay" id="alertModalOverlay">
+        <div class="alert-modal">
+            <div class="alert-icon" id="alertModalIcon"></div>
+            <h3 class="alert-title" id="alertModalTitle">Order Placed</h3>
+            <p class="alert-message" id="alertModalMsg">We will process your order soon!</p>
+            <button class="alert-btn" id="alertModalCloseBtn">Got it</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/product.js"></script>
+</body>
+
+</html>

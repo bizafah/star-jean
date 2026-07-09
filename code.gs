@@ -1,5 +1,5 @@
 /**
- * Google Apps Script Backend for Women's Boutique Store
+ * Google Apps Script Backend for Star-Jean Apparel Store
  * Install this script inside the Apps Script editor attached to your Google Sheet.
  * Set up sheets named "Products" and "Orders" in your spreadsheet.
  */
@@ -13,10 +13,18 @@ function setupDatabase() {
     productsSheet = ss.insertSheet("Products");
     productsSheet.appendRow([
       "id", "name", "category", "is_top", "description", 
-      "image_url", "price", "sale_price", "stock_s", "stock_m", "stock_l"
+      "image_url", "price", "sale_price", "stock_s", "stock_m", "stock_l", "colors"
     ]);
     // Format headers
-    productsSheet.getRange("A1:K1").setFontWeight("bold").setBackground("#F3F3F3");
+    productsSheet.getRange("A1:L1").setFontWeight("bold").setBackground("#F3F3F3");
+  } else {
+    // Ensure colors header is present in column 12 if not already in existing headers
+    var lastCol = productsSheet.getLastColumn();
+    var headers = productsSheet.getRange(1, 1, 1, Math.max(lastCol, 1)).getValues()[0];
+    if (headers.indexOf("colors") === -1) {
+      productsSheet.getRange(1, 12).setValue("colors");
+      productsSheet.getRange(1, 12).setFontWeight("bold").setBackground("#F3F3F3");
+    }
   }
   
   var ordersSheet = ss.getSheetByName("Orders");
@@ -99,9 +107,8 @@ function doGet(e) {
   }
 }
 
-// Handle POST requests for write actions (updates, additions, orders)
+// Handle POST requests for write actions (updates, additions, orders, status changes)
 function doPost(e) {
-  // Use a lock to prevent concurrent modifications issues
   var lock = LockService.getScriptLock();
   try {
     lock.waitLock(15000); // wait up to 15 seconds
@@ -141,7 +148,8 @@ function doPost(e) {
         Number(prod.sale_price || 0),
         Number(prod.stock_s || 0),
         Number(prod.stock_m || 0),
-        Number(prod.stock_l || 0)
+        Number(prod.stock_l || 0),
+        prod.colors || ""
       ];
       
       if (foundRowIndex !== -1) {
@@ -247,11 +255,9 @@ function doPost(e) {
         var currentStock = Number(prodRows[foundRowIndex][sizeColIndex]);
         var newStock = currentStock - cartItem.quantity;
         
-        // Write back updated stock
         db.products.getRange(foundRowIndex + 1, sizeColIndex + 1).setValue(newStock);
       }
       
-      // Record Order row
       var orderRowValues = [
         orderObj.order_id,
         orderObj.date,
@@ -270,6 +276,36 @@ function doPost(e) {
         success: true,
         message: "Order placed and stock updated successfully!"
       })).setMimeType(ContentService.MimeType.JSON);
+      
+    } else if (action === "updateOrderStatus") {
+      var ordId = postData.order_id;
+      var newStatus = postData.status;
+      var ordersRows = db.orders.getDataRange().getValues();
+      var foundRowIndex = -1;
+      
+      for (var i = 1; i < ordersRows.length; i++) {
+        if (String(ordersRows[i][0]) === String(ordId)) {
+          foundRowIndex = i + 1;
+          break;
+        }
+      }
+      
+      if (foundRowIndex !== -1) {
+        // Status is header column 8 (column H, index 8 1-based)
+        db.orders.getRange(foundRowIndex, 8).setValue(newStatus);
+        
+        lock.releaseLock();
+        return ContentService.createTextOutput(JSON.stringify({
+          success: true,
+          message: "Order status updated successfully"
+        })).setMimeType(ContentService.MimeType.JSON);
+      } else {
+        lock.releaseLock();
+        return ContentService.createTextOutput(JSON.stringify({
+          success: false,
+          message: "Order ID not found"
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
       
     } else {
       lock.releaseLock();
