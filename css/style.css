@@ -1513,8 +1513,16 @@ footer {
   }
 
   .hero {
-    min-height: 400px;
-    max-height: 600px;
+    height: auto;
+    min-height: unset;
+    max-height: unset;
+    aspect-ratio: 16 / 9;
+  }
+
+  .hero-slide {
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
   }
 
   .hero-title {
