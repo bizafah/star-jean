@@ -94,10 +94,27 @@ header {
 }
 
 .logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-family: var(--font-serif);
   font-size: 1.6rem;
   font-weight: 600;
   color: #FFFFFF;
+}
+
+.logo-img {
+  height: 40px;
+  width: auto;
+  display: block;
+}
+
+.logo-text {
+  display: inline-flex;
+}
+
+.logo-text span {
+  color: #9CA3AF;
 }
 
 .logo span {
@@ -1419,16 +1436,30 @@ footer {
   visibility: hidden;
 }
 
+.loader-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.loader-logo-img {
+  height: 60px;
+  width: auto;
+  display: block;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+}
+
 .loader-logo {
   font-family: var(--font-serif);
   font-size: 3rem;
   font-weight: 600;
-  margin-bottom: 20px;
+  color: #FFFFFF;
   animation: pulse 1.8s infinite ease-in-out;
 }
 
 .loader-logo span {
-  color: #9CA3AF;
+  color: #F59E0B;
 }
 
 .loader-bar {
@@ -1446,7 +1477,7 @@ footer {
   left: -50%;
   width: 50%;
   height: 100%;
-  background-color: #FFF;
+  background-color: #F59E0B;
   animation: loading 1.2s infinite ease-in-out;
 }
 

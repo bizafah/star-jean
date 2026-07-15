@@ -285,15 +285,24 @@ body {
     border: 1px solid var(--border-color);
     border-radius: 8px;
     display: flex;
-    justify-content: center;
-    align-items: center;
-    overflow: hidden;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px;
+    overflow-y: auto;
 }
 
 .image-preview-placeholder {
     text-align: center;
     color: var(--text-muted);
     padding: 24px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 150px;
 }
 
 .image-preview-placeholder svg {
@@ -306,6 +315,77 @@ body {
 .image-preview-placeholder p {
     font-size: 0.8rem;
     max-width: 250px;
+}
+
+/* Image preview thumbnails */
+.preview-img-wrapper {
+    position: relative;
+    display: inline-block;
+    margin: 4px;
+    width: 100px;
+    height: 120px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    background: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.preview-img-wrapper:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.preview-img-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: opacity 0.2s ease;
+}
+
+.preview-img-wrapper .remove-img-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #EF4444;
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    line-height: 1;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.preview-img-wrapper .remove-img-btn:hover {
+    background: #DC2626;
+    transform: scale(1.1);
+}
+
+.preview-img-wrapper .image-error {
+    display: none;
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+    background: #F3F4F6;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    color: #9CA3AF;
+    font-size: 12px;
+    padding: 8px;
+    text-align: center;
 }
 
 /* Buttons styling */
