@@ -13,22 +13,36 @@ function setupDatabase() {
     productsSheet = ss.insertSheet("Products");
     productsSheet.appendRow([
       "id", "name", "category", "is_top", "description", 
-      "image_url", "images", "price", "sale_price", "stock_s", "stock_m", "stock_l", "colors"
+      "image_url", "images", "price", "sale_price", "stock_xs", "stock_s", "stock_m", "stock_l", "stock_xl", "colors"
     ]);
     // Format headers
-    productsSheet.getRange("A1:N1").setFontWeight("bold").setBackground("#F3F3F3");
+    productsSheet.getRange("A1:O1").setFontWeight("bold").setBackground("#F3F3F3");
   } else {
-    // Ensure colors header is present in column 12 if not already in existing headers
+    // Ensure all new size columns are present
     var lastCol = productsSheet.getLastColumn();
     var headers = productsSheet.getRange(1, 1, 1, Math.max(lastCol, 1)).getValues()[0];
+    
+    var newHeaders = ["stock_xs", "stock_s", "stock_m", "stock_l", "stock_xl"];
+    newHeaders.forEach(function(headerName) {
+      if (headers.indexOf(headerName) === -1) {
+        var newColIndex = headers.length + 1;
+        productsSheet.getRange(1, newColIndex).setValue(headerName);
+        productsSheet.getRange(1, newColIndex).setFontWeight("bold").setBackground("#F3F3F3");
+        headers.push(headerName);
+      }
+    });
+    
+    // Ensure colors header is present
     if (headers.indexOf("colors") === -1) {
-      productsSheet.getRange(1, 12).setValue("colors");
-      productsSheet.getRange(1, 12).setFontWeight("bold").setBackground("#F3F3F3");
+      var colorsColIndex = headers.length + 1;
+      productsSheet.getRange(1, colorsColIndex).setValue("colors");
+      productsSheet.getRange(1, colorsColIndex).setFontWeight("bold").setBackground("#F3F3F3");
     }
-    // Ensure images header is present in column 7
+    // Ensure images header is present
     if (headers.indexOf("images") === -1) {
-      productsSheet.getRange(1, 7).setValue("images");
-      productsSheet.getRange(1, 7).setFontWeight("bold").setBackground("#F3F3F3");
+      var imagesColIndex = headers.length + 1;
+      productsSheet.getRange(1, imagesColIndex).setValue("images");
+      productsSheet.getRange(1, imagesColIndex).setFontWeight("bold").setBackground("#F3F3F3");
     }
   }
   
@@ -154,6 +168,7 @@ function doPost(e) {
     if (action === "saveProduct") {
       var prod = postData.product;
       var rows = db.products.getDataRange().getValues();
+      var headers = rows[0];
       var foundRowIndex = -1;
       
       // Look for existing product
@@ -167,27 +182,33 @@ function doPost(e) {
       // Convert images array to JSON string for storage
       var imagesJson = prod.images ? JSON.stringify(prod.images) : "";
       
-      var rowValues = [
-        prod.id,
-        prod.name,
-        prod.category,
-        String(prod.is_top),
-        prod.description,
-        prod.image_url,
-        imagesJson,
-        Number(prod.price),
-        Number(prod.sale_price || 0),
-        Number(prod.stock_s || 0),
-        Number(prod.stock_m || 0),
-        Number(prod.stock_l || 0),
-        prod.colors || ""
-      ];
+      // Build row values - ensure we match the header columns
+      var rowValues = [];
+      for (var h = 0; h < headers.length; h++) {
+        var headerName = headers[h];
+        switch (headerName) {
+          case "id": rowValues.push(prod.id); break;
+          case "name": rowValues.push(prod.name); break;
+          case "category": rowValues.push(prod.category); break;
+          case "is_top": rowValues.push(String(prod.is_top)); break;
+          case "description": rowValues.push(prod.description); break;
+          case "image_url": rowValues.push(prod.image_url); break;
+          case "images": rowValues.push(imagesJson); break;
+          case "price": rowValues.push(Number(prod.price)); break;
+          case "sale_price": rowValues.push(Number(prod.sale_price || 0)); break;
+          case "stock_xs": rowValues.push(Number(prod.stock_xs || 0)); break;
+          case "stock_s": rowValues.push(Number(prod.stock_s || 0)); break;
+          case "stock_m": rowValues.push(Number(prod.stock_m || 0)); break;
+          case "stock_l": rowValues.push(Number(prod.stock_l || 0)); break;
+          case "stock_xl": rowValues.push(Number(prod.stock_xl || 0)); break;
+          case "colors": rowValues.push(prod.colors || ""); break;
+          default: rowValues.push(""); break;
+        }
+      }
       
       if (foundRowIndex !== -1) {
-        // Update product - ensure we have enough columns
-        var numCols = rowValues.length;
-        // If sheet has more columns, only write the first numCols
-        db.products.getRange(foundRowIndex, 1, 1, numCols).setValues([rowValues]);
+        // Update product - write exactly the number of columns in the header
+        db.products.getRange(foundRowIndex, 1, 1, rowValues.length).setValues([rowValues]);
       } else {
         // Append new product
         db.products.appendRow(rowValues);
