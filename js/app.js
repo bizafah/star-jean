@@ -1,7 +1,5 @@
 // Star-Jean Storefront Core Logic
 
-const DELIVERY_CHARGES = 350;
-
 // App State
 const state = {
     products: [],
@@ -14,7 +12,6 @@ const DELIVERY_CHARGES = 350;
 
 // DOM References
 const elements = {
-    pageLoader: document.getElementById('pageLoader'),
     demoBanner: document.getElementById('demoBanner'),
     productsGrid: document.getElementById('productsGrid'),
     topSellingGrid: document.getElementById('topSellingGrid'),
@@ -130,18 +127,8 @@ async function fetchProductsAndRender() {
     } catch (error) {
         console.error("Error loading products:", error);
         showAlert('error', 'Error', 'Could not load products.');
-    } finally {
-        elements.pageLoader.classList.add('hidden');
     }
 }
-
-// Timeout fallback to hide loader if fetch hangs
-setTimeout(() => {
-    const loader = document.getElementById('pageLoader');
-    if (loader && !loader.classList.contains('hidden')) {
-        loader.classList.add('hidden');
-    }
-}, 8000);
 
 // Create product card HTML
 function createProductCardHTML(product) {

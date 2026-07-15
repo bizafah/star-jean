@@ -4,8 +4,8 @@ const CONFIG = {
     // Example: "https://script.google.com/macros/s/AKfycbz.../exec"
     API_URL: "https://script.google.com/macros/s/AKfycbyq8vG9rYoZktD_tgsXrqShKmYKv4-_ATEX3w8DyVUyLIUiB1fHzJjtF086nBgiOoXw_Q/exec",
 
-    // Fetch timeout in ms
-    FETCH_TIMEOUT: 4000,
+    // Fetch timeout in ms - reduced for faster loading
+    FETCH_TIMEOUT: 1500,
 
     // Database helper functions (handles Google Sheets or LocalStorage fallback)
     async getDbData() {
@@ -19,8 +19,8 @@ const CONFIG = {
                 return this.getLocalData();
             }
         } else {
-            // Simulate network request delay
-            await new Promise(resolve => setTimeout(resolve, 400));
+            // Minimal delay for local mode
+            await new Promise(resolve => setTimeout(resolve, 100));
             return this.getLocalData();
         }
     },
@@ -43,8 +43,8 @@ const CONFIG = {
                 return this.executeLocalAction(payload);
             }
         } else {
-            // Simulate network request delay
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // Minimal delay for local mode
+            await new Promise(resolve => setTimeout(resolve, 100));
             return this.executeLocalAction(payload);
         }
     },

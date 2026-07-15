@@ -12,7 +12,6 @@ const state = {
 
 // DOM References
 const elements = {
-    pageLoader: document.getElementById('pageLoader'),
     detailGrid: document.getElementById('detailGrid'),
     cartCountBubble: document.getElementById('cartCountBubble'),
     cartDrawer: document.getElementById('cartDrawer'),
@@ -71,7 +70,6 @@ async function fetchProductDetails() {
 
     if (!prodId) {
         renderErrorState("No product ID specified in path.");
-        elements.pageLoader.classList.add('hidden');
         return;
     }
 
@@ -89,8 +87,6 @@ async function fetchProductDetails() {
     } catch (error) {
         console.error("Error loading product details:", error);
         renderErrorState("Could not communicate with store database.");
-    } finally {
-        elements.pageLoader.classList.add('hidden');
     }
 }
 
