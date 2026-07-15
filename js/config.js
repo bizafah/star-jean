@@ -2,7 +2,7 @@
 const CONFIG = {
     // Replace this with your deployed Google Apps Script Web App URL!
     // Example: "https://script.google.com/macros/s/AKfycbz.../exec"
-    API_URL: "https://script.google.com/macros/s/AKfycbyq8vG9rYoZktD_tgsXrqShKmYKv4-_ATEX3w8DyVUyLIUiB1fHzJjtF086nBgiOoXw_Q/exec",
+    API_URL: "https://script.google.com/macros/s/AKfycbzmwKnMLgA-aBsU8MeOqgdKoK_I45y0_rb3zyhEEpwrlR5KbTn6aApvPb5m_PVqKEaR/exec",
 
     // Fetch timeout in ms - reduced for faster loading
     FETCH_TIMEOUT: 1500,
