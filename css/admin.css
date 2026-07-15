@@ -1,5 +1,6 @@
 /* Star-Jean Admin Dashboard Layout CSS overrides */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap');
 
 :root {
     --admin-bg: #F9FAFB;
@@ -17,6 +18,8 @@
     --radius: 12px;
     --font-sans: 'Inter', system-ui, sans-serif;
     --font-serif: 'Playfair Display', Georgia, serif;
+    --font-brand: 'Quicksand', system-ui, sans-serif;
+    --brand-color: #2563EB;
 }
 
 * {
@@ -49,9 +52,10 @@ body {
 }
 
 .admin-header h1 {
-    font-family: var(--font-serif);
-    font-size: 2.2rem;
-    font-weight: 600;
+    font-family: var(--font-brand);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--brand-color);
 }
 
 .admin-header h1 span {
