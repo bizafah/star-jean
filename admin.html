@@ -35,11 +35,22 @@
         }
 
         .login-logo {
-            font-family: 'Quicksand', system-ui, sans-serif;
-            font-size: 2rem;
-            font-weight: 700;
+            font-family: 'Brevis Regular', 'Times New Roman', serif;
+            font-size: 2.2rem;
+            font-weight: 400;
             margin-bottom: 8px;
-            color: #2563EB;
+        }
+
+        .login-logo .star {
+            color: #FACC15;
+        }
+
+        .login-logo .jeans {
+            color: #1E40AF;
+        }
+
+        .login-logo .num {
+            color: #FFFFFF;
         }
 
         .login-logo span {
@@ -167,7 +178,7 @@
     <!-- Password Lock Screen Overlay -->
     <div class="login-overlay" id="loginOverlay">
         <div class="login-box">
-            <h1 class="login-logo">Star.<span>Jeans 819</span></h1>
+            <h1 class="login-logo"><span class="star">Star</span><span class="jeans">Jeans</span> <span class="num">819</span></h1>
             <p>Enter Master Password to Access Star.Jeans 819 Admin</p>
             <div class="login-error" id="loginError">Incorrect Password. Please try again.</div>
             <input type="password" class="login-input" id="passwordInput" placeholder="Password" autofocus>
@@ -384,6 +395,10 @@ https://images.unsplash.com/photo-3..." rows="4" autocomplete="off"></textarea>
                     <h4 class="stock-headline" style="margin-top: 24px; font-weight:600;">Size Stock Management</h4>
                     <div class="stock-row" style="margin-bottom: 24px;">
                         <div class="form-group">
+                            <label for="stockXS">Stock XS</label>
+                            <input type="number" id="stockXS" value="0" min="0">
+                        </div>
+                        <div class="form-group">
                             <label for="stockS">Stock S</label>
                             <input type="number" id="stockS" value="0" min="0" required>
                         </div>
@@ -394,6 +409,10 @@ https://images.unsplash.com/photo-3..." rows="4" autocomplete="off"></textarea>
                         <div class="form-group">
                             <label for="stockL">Stock L</label>
                             <input type="number" id="stockL" value="0" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="stockXL">Stock XL</label>
+                            <input type="number" id="stockXL" value="0" min="0">
                         </div>
                     </div>
 
