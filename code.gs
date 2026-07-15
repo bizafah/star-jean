@@ -13,10 +13,10 @@ function setupDatabase() {
     productsSheet = ss.insertSheet("Products");
     productsSheet.appendRow([
       "id", "name", "category", "is_top", "description", 
-      "image_url", "price", "sale_price", "stock_s", "stock_m", "stock_l", "colors"
+      "image_url", "images", "price", "sale_price", "stock_s", "stock_m", "stock_l", "colors"
     ]);
     // Format headers
-    productsSheet.getRange("A1:L1").setFontWeight("bold").setBackground("#F3F3F3");
+    productsSheet.getRange("A1:N1").setFontWeight("bold").setBackground("#F3F3F3");
   } else {
     // Ensure colors header is present in column 12 if not already in existing headers
     var lastCol = productsSheet.getLastColumn();
@@ -25,15 +25,32 @@ function setupDatabase() {
       productsSheet.getRange(1, 12).setValue("colors");
       productsSheet.getRange(1, 12).setFontWeight("bold").setBackground("#F3F3F3");
     }
+    // Ensure images header is present in column 7
+    if (headers.indexOf("images") === -1) {
+      productsSheet.getRange(1, 7).setValue("images");
+      productsSheet.getRange(1, 7).setFontWeight("bold").setBackground("#F3F3F3");
+    }
   }
   
   var ordersSheet = ss.getSheetByName("Orders");
   if (!ordersSheet) {
     ordersSheet = ss.insertSheet("Orders");
     ordersSheet.appendRow([
-      "order_id", "date", "name", "phone", "address", "items", "total", "status"
+      "order_id", "date", "name", "phone", "address", "items", "total", "subtotal", "delivery_charges", "status"
     ]);
-    ordersSheet.getRange("A1:H1").setFontWeight("bold").setBackground("#F3F3F3");
+    ordersSheet.getRange("A1:J1").setFontWeight("bold").setBackground("#F3F3F3");
+  } else {
+    // Ensure subtotal and delivery_charges headers are present
+    var lastCol = ordersSheet.getLastColumn();
+    var headers = ordersSheet.getRange(1, 1, 1, Math.max(lastCol, 1)).getValues()[0];
+    if (headers.indexOf("subtotal") === -1) {
+      ordersSheet.getRange(1, 9).setValue("subtotal");
+      ordersSheet.getRange(1, 9).setFontWeight("bold").setBackground("#F3F3F3");
+    }
+    if (headers.indexOf("delivery_charges") === -1) {
+      ordersSheet.getRange(1, 10).setValue("delivery_charges");
+      ordersSheet.getRange(1, 10).setFontWeight("bold").setBackground("#F3F3F3");
+    }
   }
 }
 
@@ -65,6 +82,16 @@ function doGet(e) {
           val = (val === true || String(val).toLowerCase() === "true");
         }
         prod[productHeaders[j]] = val;
+      }
+      // Ensure images array is parsed
+      if (prod.images && typeof prod.images === 'string') {
+        try {
+          prod.images = JSON.parse(prod.images);
+        } catch(ex) {
+          prod.images = [];
+        }
+      } else if (!prod.images) {
+        prod.images = [];
       }
       products.push(prod);
     }
@@ -137,6 +164,9 @@ function doPost(e) {
         }
       }
       
+      // Convert images array to JSON string for storage
+      var imagesJson = prod.images ? JSON.stringify(prod.images) : "";
+      
       var rowValues = [
         prod.id,
         prod.name,
@@ -144,6 +174,7 @@ function doPost(e) {
         String(prod.is_top),
         prod.description,
         prod.image_url,
+        imagesJson,
         Number(prod.price),
         Number(prod.sale_price || 0),
         Number(prod.stock_s || 0),
@@ -153,8 +184,10 @@ function doPost(e) {
       ];
       
       if (foundRowIndex !== -1) {
-        // Update product
-        db.products.getRange(foundRowIndex, 1, 1, rowValues.length).setValues([rowValues]);
+        // Update product - ensure we have enough columns
+        var numCols = rowValues.length;
+        // If sheet has more columns, only write the first numCols
+        db.products.getRange(foundRowIndex, 1, 1, numCols).setValues([rowValues]);
       } else {
         // Append new product
         db.products.appendRow(rowValues);
@@ -266,6 +299,8 @@ function doPost(e) {
         orderObj.address,
         JSON.stringify(orderObj.items),
         Number(orderObj.total),
+        Number(orderObj.subtotal || 0),
+        Number(orderObj.delivery_charges || 0),
         orderObj.status || "Pending"
       ];
       
@@ -291,8 +326,8 @@ function doPost(e) {
       }
       
       if (foundRowIndex !== -1) {
-        // Status is header column 8 (column H, index 8 1-based)
-        db.orders.getRange(foundRowIndex, 8).setValue(newStatus);
+        // Status is header column 10 (column J, 1-based)
+        db.orders.getRange(foundRowIndex, 10).setValue(newStatus);
         
         lock.releaseLock();
         return ContentService.createTextOutput(JSON.stringify({
