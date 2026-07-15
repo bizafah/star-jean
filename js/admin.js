@@ -39,6 +39,8 @@ const elements = {
     stockS: document.getElementById('stockS'),
     stockM: document.getElementById('stockM'),
     stockL: document.getElementById('stockL'),
+    stockXS: document.getElementById('stockXS'),
+    stockXL: document.getElementById('stockXL'),
     submitProductBtn: document.getElementById('submitProductBtn'),
 
     // Choice Elements
@@ -196,7 +198,7 @@ function updateDashboardUI() {
 
     let outStock = 0;
     products.forEach(p => {
-        const total = (parseInt(p.stock_s) || 0) + (parseInt(p.stock_m) || 0) + (parseInt(p.stock_l) || 0);
+        const total = (parseInt(p.stock_xs) || 0) + (parseInt(p.stock_s) || 0) + (parseInt(p.stock_m) || 0) + (parseInt(p.stock_l) || 0) + (parseInt(p.stock_xl) || 0);
         if (total === 0) outStock++;
     });
     elements.statOutOfStock.textContent = outStock;
@@ -224,9 +226,11 @@ function renderProductsTable() {
     }
 
     products.forEach(p => {
+        const xs = parseInt(p.stock_xs) || 0;
         const s = parseInt(p.stock_s) || 0;
         const m = parseInt(p.stock_m) || 0;
         const l = parseInt(p.stock_l) || 0;
+        const xl = parseInt(p.stock_xl) || 0;
         const oPrice = parseFloat(p.price) || 0;
         const sPrice = parseFloat(p.sale_price) || 0;
 
@@ -242,10 +246,12 @@ function renderProductsTable() {
 
         // Render stock tags values
         const stockHTML = `
-            <div style="display:flex; gap:6px;">
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <span class="size-stock-tag ${xs === 0 ? 'empty' : ''}" style="padding: 2px 6px; border-radius:4px; font-size:0.75rem; font-weight:600; border: 1px solid var(--border-color);">XS: ${xs}</span>
                 <span class="size-stock-tag ${s === 0 ? 'empty' : ''}" style="padding: 2px 6px; border-radius:4px; font-size:0.75rem; font-weight:600; border: 1px solid var(--border-color);">S: ${s}</span>
                 <span class="size-stock-tag ${m === 0 ? 'empty' : ''}" style="padding: 2px 6px; border-radius:4px; font-size:0.75rem; font-weight:600; border: 1px solid var(--border-color);">M: ${m}</span>
                 <span class="size-stock-tag ${l === 0 ? 'empty' : ''}" style="padding: 2px 6px; border-radius:4px; font-size:0.75rem; font-weight:600; border: 1px solid var(--border-color);">L: ${l}</span>
+                <span class="size-stock-tag ${xl === 0 ? 'empty' : ''}" style="padding: 2px 6px; border-radius:4px; font-size:0.75rem; font-weight:600; border: 1px solid var(--border-color);">XL: ${xl}</span>
             </div>
         `;
 
@@ -493,6 +499,8 @@ function fillFormForEdit(product) {
     elements.stockS.value = product.stock_s || 0;
     elements.stockM.value = product.stock_m || 0;
     elements.stockL.value = product.stock_l || 0;
+    elements.stockXS.value = product.stock_xs || 0;
+    elements.stockXL.value = product.stock_xl || 0;
 
     renderImagePreviews();
 
@@ -533,6 +541,8 @@ async function handleProductSave(e) {
     const sQty = parseInt(elements.stockS.value) || 0;
     const mQty = parseInt(elements.stockM.value) || 0;
     const lQty = parseInt(elements.stockL.value) || 0;
+    const xsQty = parseInt(elements.stockXS.value) || 0;
+    const xlQty = parseInt(elements.stockXL.value) || 0;
 
     if (salePriceVal > 0 && salePriceVal >= priceVal) {
         showToast('error', 'Sale price must be lower than original price!');
@@ -563,9 +573,11 @@ async function handleProductSave(e) {
             price: priceVal,
             sale_price: salePriceVal,
             is_top: isTopVal,
+            stock_xs: xsQty,
             stock_s: sQty,
             stock_m: mQty,
-            stock_l: lQty
+            stock_l: lQty,
+            stock_xl: xlQty
         }
     };
 

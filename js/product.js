@@ -2,13 +2,14 @@
 
 const DELIVERY_CHARGES = 350;
 
-// App State
 const state = {
     product: null,
     cart: [],
     selectedSize: '',
     selectedColor: ''
 };
+
+const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL'];
 
 // DOM References
 const elements = {
@@ -93,10 +94,12 @@ async function fetchProductDetails() {
 // Render dynamic details grid
 function renderProductDetails() {
     const p = state.product;
+    const xsStock = parseInt(p.stock_xs) || 0;
     const sStock = parseInt(p.stock_s) || 0;
     const mStock = parseInt(p.stock_m) || 0;
     const lStock = parseInt(p.stock_l) || 0;
-    const totalStock = sStock + mStock + lStock;
+    const xlStock = parseInt(p.stock_xl) || 0;
+    const totalStock = xsStock + sStock + mStock + lStock + xlStock;
 
     const originPrice = parseFloat(p.price) || 0;
     const salePrice = parseFloat(p.sale_price) || 0;
@@ -180,16 +183,20 @@ function renderProductDetails() {
                     <span id="detailStockNotice" style="color:var(--danger); font-weight:600;"></span>
                 </div>
                 <div class="detail-size-pills">
+                    <button class="detail-size-pill" ${xsStock === 0 ? 'disabled' : ''} data-size="XS">XS</button>
                     <button class="detail-size-pill" ${sStock === 0 ? 'disabled' : ''} data-size="S">S</button>
                     <button class="detail-size-pill" ${mStock === 0 ? 'disabled' : ''} data-size="M">M</button>
                     <button class="detail-size-pill" ${lStock === 0 ? 'disabled' : ''} data-size="L">L</button>
+                    <button class="detail-size-pill" ${xlStock === 0 ? 'disabled' : ''} data-size="XL">XL</button>
                 </div>
             </div>
 
             <div class="stock-level-tags">
+                <span class="stock-tag">XS Stock: <strong>${xsStock}</strong></span>
                 <span class="stock-tag">S Stock: <strong>${sStock}</strong></span>
                 <span class="stock-tag">M Stock: <strong>${mStock}</strong></span>
                 <span class="stock-tag">L Stock: <strong>${lStock}</strong></span>
+                <span class="stock-tag">XL Stock: <strong>${xlStock}</strong></span>
             </div>
 
             <div class="action-row">
@@ -245,7 +252,8 @@ function renderProductDetails() {
             state.selectedSize = pill.dataset.size;
 
             const stockNoticeEl = document.getElementById('detailStockNotice');
-            const targetStock = state.selectedSize === 'S' ? sStock : state.selectedSize === 'M' ? mStock : lStock;
+            const stockMap = { XS: xsStock, S: sStock, M: mStock, L: lStock, XL: xlStock };
+            const targetStock = stockMap[state.selectedSize] || 0;
             if (targetStock <= 3) {
                 stockNoticeEl.textContent = `Only ${targetStock} left in ${state.selectedSize}!`;
             } else {
@@ -257,7 +265,7 @@ function renderProductDetails() {
     // Hook Add details click
     elements.detailGrid.querySelector('#detailAddBtn').addEventListener('click', () => {
         if (!state.selectedSize) {
-            showAlert('error', 'Select Size', 'Please select a size (S, M, or L) before ordering.');
+            showAlert('error', 'Select Size', 'Please select a size (XS, S, M, L, or XL) before ordering.');
             return;
         }
 
@@ -267,6 +275,7 @@ function renderProductDetails() {
         // Override size format descriptor to include color representation
         const sizeWithColor = sizeVal + colorVal;
 
+        const stockMap = { XS: xsStock, S: sStock, M: mStock, L: lStock, XL: xlStock };
         const cartItem = {
             id: p.id,
             name: p.name,
@@ -274,7 +283,7 @@ function renderProductDetails() {
             image_url: p.image_url || '',
             size: sizeWithColor, // Save as combined key
             quantity: 1,
-            maxStock: sizeVal === 'S' ? sStock : sizeVal === 'M' ? mStock : lStock
+            maxStock: stockMap[sizeVal] || 0
         };
 
         const existingItem = state.cart.find(i => i.id === cartItem.id && i.size === cartItem.size);
