@@ -4,11 +4,14 @@ const CONFIG = {
     // Example: "https://script.google.com/macros/s/AKfycbz.../exec"
     API_URL: "https://script.google.com/macros/s/AKfycbyq8vG9rYoZktD_tgsXrqShKmYKv4-_ATEX3w8DyVUyLIUiB1fHzJjtF086nBgiOoXw_Q/exec",
 
+    // Fetch timeout in ms
+    FETCH_TIMEOUT: 4000,
+
     // Database helper functions (handles Google Sheets or LocalStorage fallback)
     async getDbData() {
         if (this.API_URL) {
             try {
-                const response = await fetch(this.API_URL, { method: 'GET', cache: 'no-cache' });
+                const response = await this.fetchWithTimeout(this.API_URL, { method: 'GET', cache: 'no-cache' });
                 if (!response.ok) throw new Error("Network response was not ok");
                 return await response.json();
             } catch (error) {
@@ -25,11 +28,11 @@ const CONFIG = {
     async postDbAction(payload) {
         if (this.API_URL) {
             try {
-                const response = await fetch(this.API_URL, {
+                const response = await this.fetchWithTimeout(this.API_URL, {
                     method: 'POST',
                     mode: 'cors',
                     headers: {
-                        'Content-Type': 'text/plain', // Prevents CORS preflight request issues
+                        'Content-Type': 'text/plain',
                     },
                     body: JSON.stringify(payload)
                 });
@@ -43,6 +46,17 @@ const CONFIG = {
             // Simulate network request delay
             await new Promise(resolve => setTimeout(resolve, 500));
             return this.executeLocalAction(payload);
+        }
+    },
+
+    async fetchWithTimeout(url, options = {}) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.FETCH_TIMEOUT);
+        try {
+            const response = await fetch(url, { ...options, signal: controller.signal });
+            return response;
+        } finally {
+            clearTimeout(timeoutId);
         }
     },
 

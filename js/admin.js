@@ -4,6 +4,7 @@
 let products = [];
 let orders = [];
 let editingProductId = null;
+let pendingImages = []; // Array of image URLs/base64 strings
 
 // DOM References
 const elements = {
@@ -24,8 +25,8 @@ const elements = {
     formPanelTitle: document.getElementById('formPanelTitle').querySelector('span'),
     formResetBtn: document.getElementById('formResetBtn'),
     prodId: document.getElementById('prodId'),
-    prodImageUrl: document.getElementById('prodImageUrl'),
-    prodImageFile: document.getElementById('prodImageFile'),
+    prodImageUrls: document.getElementById('prodImageUrls'),
+    prodImageFiles: document.getElementById('prodImageFiles'),
     imagePreviewContainer: document.getElementById('imagePreviewContainer'),
     imagePreviewPlaceholder: document.getElementById('imagePreviewPlaceholder'),
     prodName: document.getElementById('prodName'),
@@ -102,12 +103,12 @@ function setupEventListeners() {
         });
     });
 
-    // URL preview triggers
-    elements.prodImageUrl.addEventListener('input', updateImagePreview);
-    elements.prodImageUrl.addEventListener('change', updateImagePreview);
+    // URL preview triggers - multiple URLs
+    elements.prodImageUrls.addEventListener('input', updateImagePreviewFromUrls);
+    elements.prodImageUrls.addEventListener('change', updateImagePreviewFromUrls);
 
-    // FileReader uploader converter to Base64
-    elements.prodImageFile.addEventListener('change', handleFileSelectorUploader);
+    // FileReader uploader converter to Base64 - multiple files
+    elements.prodImageFiles.addEventListener('change', handleFileSelectorUploader);
 
     // Form Reset Button
     elements.formResetBtn.addEventListener('click', resetForm);
@@ -248,10 +249,17 @@ function renderProductsTable() {
             </div>
         `;
 
-        // Render thumbnail img
+// Render thumbnail img - use first image from images array or fallback to image_url
+        let primaryImage = '';
+        if (p.images && Array.isArray(p.images) && p.images.length > 0) {
+            primaryImage = p.images[0];
+        } else if (p.image_url && p.image_url.trim() !== '') {
+            primaryImage = p.image_url;
+        }
+        
         let imgHTML = '';
-        if (p.image_url && p.image_url.trim() !== '') {
-            imgHTML = `<img src="${p.image_url.replace(/"/g, '&quot;')}" style="width:48px; height:56px; object-fit:cover; border-radius:4px;" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=80';">`;
+        if (primaryImage) {
+            imgHTML = `<img src="${primaryImage.replace(/"/g, '"')}" style="width:48px; height:56px; object-fit:cover; border-radius:4px;" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=80';">`;
         } else {
             imgHTML = `<div style="width:48px;height:56px;background:#E5E7EB;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#9CA3AF"><svg style="width:16px;height:16px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>`;
         }
@@ -371,33 +379,88 @@ async function updateOrderStatus(ordId, newStatus) {
     }
 }
 
-// Live Image URL resolve preview update box
-function updateImagePreview() {
-    const url = elements.prodImageUrl.value.trim();
-    if (url === '') {
-        elements.imagePreviewPlaceholder.style.display = 'block';
-        const img = elements.imagePreviewContainer.querySelector('img');
-        if (img) img.remove();
+// Parse textarea URLs into array
+function parseImageUrls(text) {
+    return text.split('\n')
+        .map(url => url.trim())
+        .filter(url => url.length > 0);
+}
+
+// Render multiple image previews
+function renderImagePreviews() {
+    const container = elements.imagePreviewContainer;
+    const placeholder = elements.imagePreviewPlaceholder;
+    
+    if (pendingImages.length === 0) {
+        placeholder.style.display = 'block';
+        // Remove any existing preview images
+        container.querySelectorAll('.preview-img-wrapper').forEach(el => el.remove());
         return;
     }
+    
+    placeholder.style.display = 'none';
+    
+    // Remove existing previews
+    container.querySelectorAll('.preview-img-wrapper').forEach(el => el.remove());
+    
+    // Create preview for each image
+    pendingImages.forEach((imgSrc, index) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'preview-img-wrapper';
+        wrapper.style.cssText = 'position:relative; display:inline-block; margin:8px; width:100px; height:120px;';
+        wrapper.innerHTML = `
+            <img src="${imgSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:8px; border:1px solid var(--border-color);" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div style="display:none; width:100%; height:100%; border-radius:8px; border:1px solid var(--border-color); background:#F3F4F6; align-items:center; justify-content:center; position:absolute; top:0; left:0; color:#9CA3AF; font-size:12px;">Failed to load</div>
+            <button type="button" class="remove-img-btn" data-index="${index}" style="position:absolute; top:-8px; right:-8px; width:24px; height:24px; border-radius:50%; background:#EF4444; color:white; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:14px; line-height:1; z-index:10;">×</button>
+        `;
+        container.appendChild(wrapper);
+    });
+    
+    // Add remove button handlers
+    container.querySelectorAll('.remove-img-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const index = parseInt(e.target.dataset.index);
+            pendingImages.splice(index, 1);
+            renderImagePreviews();
+        });
+    });
+}
 
-    elements.imagePreviewPlaceholder.style.display = 'none';
-    let img = elements.imagePreviewContainer.querySelector('img');
-    if (!img) {
-        img = document.createElement('img');
-        img.style.width = '120px';
-        img.style.height = '140px';
-        img.style.objectFit = 'cover';
-        img.style.borderRadius = '8px';
-        img.style.border = '1px solid var(--border-color)';
-        elements.imagePreviewContainer.appendChild(img);
-    }
-    img.src = url;
-    img.onerror = () => {
-        elements.imagePreviewPlaceholder.style.display = 'block';
-        if (img) img.remove();
-        showToast('error', 'Image path cannot resolve correctly.');
-    };
+// Update preview from URLs textarea
+function updateImagePreviewFromUrls() {
+    const text = elements.prodImageUrls.value.trim();
+    pendingImages = parseImageUrls(text);
+    renderImagePreviews();
+}
+
+// Handle multiple file uploads
+function handleFileSelectorUploader(e) {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+
+    let hasError = false;
+    files.forEach(file => {
+        if (file.size > 2000000) {
+            showToast('error', 'Select smaller photo files (below 2MB each) for persistence bounds.');
+            hasError = true;
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const base64 = event.target.result;
+            pendingImages.push(base64);
+            renderImagePreviews();
+            showToast('success', 'Image file read successfully!');
+        };
+        reader.onerror = () => {
+            showToast('error', 'Could not read image file.');
+        };
+        reader.readAsDataURL(file);
+    });
+    
+    // Clear the input so same file can be selected again
+    e.target.value = '';
 }
 
 // Fill Form for Editing Mode
@@ -408,7 +471,17 @@ function fillFormForEdit(product) {
 
     // Populate values
     elements.prodId.value = product.id;
-    elements.prodImageUrl.value = product.image_url || '';
+    
+    // Handle multiple images - use product.images array or fallback to image_url
+    let images = [];
+    if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+        images = product.images;
+    } else if (product.image_url && product.image_url.trim() !== '') {
+        images = [product.image_url];
+    }
+    pendingImages = images;
+    elements.prodImageUrls.value = pendingImages.join('\n');
+    
     elements.prodName.value = product.name;
     elements.prodCategory.value = product.category;
     elements.prodColors.value = product.colors || '';
@@ -421,9 +494,9 @@ function fillFormForEdit(product) {
     elements.stockM.value = product.stock_m || 0;
     elements.stockL.value = product.stock_l || 0;
 
-    updateImagePreview();
+    renderImagePreviews();
 
-    // Trigger URL tab choice visible since editing loads the URL
+    // Trigger URL tab choice visible since editing loads the URLs
     elements.choiceUrlBtn.click();
 
     // Switch panels to tabBtnUpload view.
@@ -433,16 +506,16 @@ function fillFormForEdit(product) {
 // Reset Form Inputs
 function resetForm() {
     editingProductId = null;
+    pendingImages = [];
     elements.formPanelTitle.textContent = 'Add New Product Details';
     elements.submitProductBtn.querySelector('span').textContent = 'Add Product';
 
     elements.productForm.reset();
     elements.prodId.value = '';
-    elements.prodImageFile.value = '';
+    elements.prodImageFiles.value = '';
 
     elements.imagePreviewPlaceholder.style.display = 'block';
-    const img = elements.imagePreviewContainer.querySelector('img');
-    if (img) img.remove();
+    elements.imagePreviewContainer.querySelectorAll('.preview-img-wrapper').forEach(el => el.remove());
 }
 
 // Handle product additions or update edits save operation
@@ -455,7 +528,6 @@ async function handleProductSave(e) {
     const descVal = elements.prodDescription.value.trim();
     const priceVal = parseFloat(elements.prodPrice.value) || 0;
     const salePriceVal = parseFloat(elements.prodSalePrice.value) || 0;
-    const imageUrlVal = elements.prodImageUrl.value.trim();
     const isTopVal = elements.prodIsTop.checked;
 
     const sQty = parseInt(elements.stockS.value) || 0;
@@ -467,10 +539,16 @@ async function handleProductSave(e) {
         return;
     }
 
-    const idVal = editingProductId ? editingProductId : 'PROD-' + Date.now();
+    // Use hidden input as source of truth for product ID
+    const idVal = elements.prodId.value.trim() || 'PROD-' + Date.now();
+    const isEditing = !!elements.prodId.value.trim();
 
     elements.submitProductBtn.disabled = true;
     elements.submitProductBtn.innerHTML = '<span class="spinner" style="border-top-color:#111827"></span> Saving...';
+
+    // Use first pending image as primary image_url, and all pendingImages as images array
+    const imageUrlVal = pendingImages[0] || '';
+    const imagesVal = pendingImages;
 
     const payload = {
         action: 'saveProduct',
@@ -481,6 +559,7 @@ async function handleProductSave(e) {
             colors: colorsVal,
             description: descVal,
             image_url: imageUrlVal,
+            images: imagesVal,
             price: priceVal,
             sale_price: salePriceVal,
             is_top: isTopVal,
@@ -493,7 +572,7 @@ async function handleProductSave(e) {
     try {
         const res = await CONFIG.postDbAction(payload);
         if (res.success) {
-            showToast('success', editingProductId ? 'Product details updated!' : 'Product uploaded successfully!');
+            showToast('success', isEditing ? 'Product details updated!' : 'Product uploaded successfully!');
             resetForm();
             fetchAdminData();
             // Automatically switch back to product list pane on success
@@ -506,7 +585,7 @@ async function handleProductSave(e) {
         showToast('error', 'Connection error while saving product details.');
     } finally {
         elements.submitProductBtn.disabled = false;
-        elements.submitProductBtn.innerHTML = `<span>${editingProductId ? 'Update Product' : 'Add Product'}</span>`;
+        elements.submitProductBtn.innerHTML = `<span>${isEditing ? 'Update Product' : 'Add Product'}</span>`;
     }
 }
 

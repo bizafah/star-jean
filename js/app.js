@@ -1,5 +1,7 @@
 // Star-Jean Storefront Core Logic
 
+const DELIVERY_CHARGES = 350;
+
 // App State
 const state = {
     products: [],
@@ -7,6 +9,8 @@ const state = {
     selectedSizes: {},
     currentFilter: 'all'
 };
+
+const DELIVERY_CHARGES = 350;
 
 // DOM References
 const elements = {
@@ -131,6 +135,14 @@ async function fetchProductsAndRender() {
     }
 }
 
+// Timeout fallback to hide loader if fetch hangs
+setTimeout(() => {
+    const loader = document.getElementById('pageLoader');
+    if (loader && !loader.classList.contains('hidden')) {
+        loader.classList.add('hidden');
+    }
+}, 8000);
+
 // Create product card HTML
 function createProductCardHTML(product) {
     const sStock = parseInt(product.stock_s) || 0;
@@ -152,10 +164,17 @@ function createProductCardHTML(product) {
         badgeHTML = `<span class="badge badge-top">Top Selling</span>`;
     } else if (totalStock <= 5) badgeHTML = `<span class="badge badge-low-stock">Low Stock</span>`;
 
-    // Image
+// Image - use first image from images array or fallback to image_url
+    let primaryImage = '';
+    if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+        primaryImage = product.images[0];
+    } else if (product.image_url && product.image_url.trim() !== '') {
+        primaryImage = product.image_url;
+    }
+    
     let imgHTML = '';
-    if (product.image_url && product.image_url.trim() !== '') {
-        imgHTML = `<img src="${product.image_url.replace(/"/g, '&quot;')}" alt="${product.name}" onerror="handleImageError(this, '${product.name.replace(/'/g, "\\'")}')">`;
+    if (primaryImage) {
+        imgHTML = `<img src="${primaryImage.replace(/"/g, '"')}" alt="${product.name}" onerror="handleImageError(this, '${product.name.replace(/'/g, "\\'")}')">`;
     } else {
         imgHTML = `<div class="img-placeholder-card"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg><span>${product.name}</span></div>`;
     }
@@ -405,8 +424,24 @@ function renderCart() {
         elements.cartItemsContainer.appendChild(itemDiv);
     });
 
+    const total = subtotal + DELIVERY_CHARGES;
     elements.cartSubtotal.textContent = `RS ${subtotal.toFixed(0)}`;
-    elements.checkoutSubtotal.textContent = `RS ${subtotal.toFixed(0)}`;
+    elements.checkoutSubtotal.textContent = `RS ${total.toFixed(0)}`;
+    
+    // Update cart footer with delivery charges
+    const cartFooter = document.querySelector('.cart-footer');
+    if (cartFooter && !document.getElementById('cartDeliveryRow')) {
+        const deliveryRow = document.createElement('div');
+        deliveryRow.id = 'cartDeliveryRow';
+        deliveryRow.className = 'cart-subtotal-row';
+        deliveryRow.style.marginBottom = '8px';
+        deliveryRow.innerHTML = `
+            <span class="subtotal-label">Delivery Charges</span>
+            <span class="subtotal-val">RS ${DELIVERY_CHARGES}</span>
+        `;
+        cartFooter.insertBefore(deliveryRow, cartFooter.querySelector('.checkout-btn'));
+    }
+    
     elements.toCheckoutBtn.disabled = false;
 }
 
@@ -422,6 +457,7 @@ async function handleCheckout(e) {
     if (!name || !phone || !address) { showAlert('error', 'Missing Info', 'Please fill all fields.'); return; }
 
     const subtotal = state.cart.reduce((s, i) => s + (i.price * i.quantity), 0);
+    const total = subtotal + DELIVERY_CHARGES;
     const orderPayload = {
         action: 'placeOrder',
         order: {
@@ -441,7 +477,9 @@ async function handleCheckout(e) {
                     selected_size: i.size
                 };
             }),
-            total: subtotal,
+            total: total,
+            subtotal: subtotal,
+            delivery_charges: DELIVERY_CHARGES,
             status: 'Pending'
         }
     };

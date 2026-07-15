@@ -1,5 +1,7 @@
 // Star-Jean Product Detail Page Logic
 
+const DELIVERY_CHARGES = 350;
+
 // App State
 const state = {
     product: null,
@@ -129,16 +131,43 @@ function renderProductDetails() {
         }
     }
 
-    // Image block selector
+// Image block selector - support multiple images gallery
     let pImg = '';
-    if (p.image_url && p.image_url.trim() !== '') {
-        pImg = `<img src="${p.image_url.replace(/"/g, '&quot;')}" alt="${p.name}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=80';">`;
+    let thumbnailsHTML = '';
+    
+    // Get all images - from images array or fallback to image_url
+    let allImages = [];
+    if (p.images && Array.isArray(p.images) && p.images.length > 0) {
+        allImages = p.images;
+    } else if (p.image_url && p.image_url.trim() !== '') {
+        allImages = [p.image_url];
+    }
+    
+    if (allImages.length > 0) {
+        // Main image
+        const mainImg = allImages[0];
+        pImg = `<img id="mainProductImg" src="${mainImg.replace(/"/g, '"')}" alt="${p.name}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=80';">`;
+        
+        // Thumbnails if more than 1 image
+        if (allImages.length > 1) {
+            thumbnailsHTML = `
+                <div class="detail-thumbnails" style="display:flex; gap:8px; margin-top:12px; overflow-x:auto;">
+                    ${allImages.map((img, idx) => `
+                        <button class="thumb-btn ${idx === 0 ? 'active' : ''}" data-index="${idx}" 
+                            style="flex-shrink:0; width:60px; height:75px; border:2px solid ${idx === 0 ? '#111827' : 'var(--border)'}; border-radius:6px; overflow:hidden; cursor:pointer; padding:0; background:none;"
+                            title="View image ${idx + 1}">
+                            <img src="${img.replace(/"/g, '"')}" alt="${p.name} ${idx + 1}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none';">
+                        </button>
+                    `).join('')}
+                </div>
+            `;
+        }
     } else {
         pImg = `<div class="img-placeholder-card" style="height:100%"><svg style="width:64px;height:64px;margin-bottom:12px;opacity:0.6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></div>`;
     }
 
     elements.detailGrid.innerHTML = `
-        <div class="detail-img-box">${pImg}</div>
+        <div class="detail-img-box">${pImg}${thumbnailsHTML}</div>
         <div class="detail-info">
             <span class="detail-cat">${p.category}</span>
             <h2 class="detail-name">${p.name}</h2>
@@ -191,6 +220,24 @@ function renderProductDetails() {
     // Default select first color if variants exist
     if (colorOpts.length > 0) {
         colorOpts[0].click();
+    }
+
+    // Hook thumbnail click for image gallery
+    const thumbBtns = elements.detailGrid.querySelectorAll('.thumb-btn');
+    const mainImg = elements.detailGrid.querySelector('#mainProductImg');
+    if (thumbBtns.length > 0 && mainImg) {
+        thumbBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                thumbBtns.forEach(b => b.style.borderColor = 'var(--border)');
+                btn.style.borderColor = '#111827';
+                const idx = parseInt(btn.dataset.index);
+                // Get the image from the clicked thumbnail
+                const thumbImg = btn.querySelector('img');
+                if (thumbImg && thumbImg.src) {
+                    mainImg.src = thumbImg.src;
+                }
+            });
+        });
     }
 
     // Hook Size pills click
@@ -328,8 +375,24 @@ function renderCart() {
         elements.cartItemsContainer.appendChild(itemDiv);
     });
 
+    const total = subtotal + DELIVERY_CHARGES;
     elements.cartSubtotal.textContent = `RS ${subtotal.toFixed(0)}`;
-    elements.checkoutSubtotal.textContent = `RS ${subtotal.toFixed(0)}`;
+    elements.checkoutSubtotal.textContent = `RS ${total.toFixed(0)}`;
+    
+    // Update cart footer with delivery charges
+    const cartFooter = document.querySelector('.cart-footer');
+    if (cartFooter && !document.getElementById('cartDeliveryRow')) {
+        const deliveryRow = document.createElement('div');
+        deliveryRow.id = 'cartDeliveryRow';
+        deliveryRow.className = 'cart-subtotal-row';
+        deliveryRow.style.marginBottom = '8px';
+        deliveryRow.innerHTML = `
+            <span class="subtotal-label">Delivery Charges</span>
+            <span class="subtotal-val">RS ${DELIVERY_CHARGES}</span>
+        `;
+        cartFooter.insertBefore(deliveryRow, cartFooter.querySelector('.checkout-btn'));
+    }
+    
     elements.toCheckoutBtn.disabled = false;
 }
 
@@ -344,6 +407,7 @@ async function handleCheckout(e) {
     if (!name || !phone || !address) { showAlert('error', 'Missing Info', 'Please fill all fields.'); return; }
 
     const subtotal = state.cart.reduce((s, i) => s + (i.price * i.quantity), 0);
+    const total = subtotal + DELIVERY_CHARGES;
     const orderPayload = {
         action: 'placeOrder',
         order: {
@@ -363,7 +427,9 @@ async function handleCheckout(e) {
                     selected_size: i.size
                 };
             }),
-            total: subtotal,
+            total: total,
+            subtotal: subtotal,
+            delivery_charges: DELIVERY_CHARGES,
             status: 'Pending'
         }
     };
